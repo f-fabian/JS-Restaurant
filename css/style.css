@@ -6,6 +6,11 @@ body {
     font-family: monospace;
 }
 
+canvas {
+    border: 2px solid red;
+    background-color: black;;
+}
+
 #codeInput {
     width: 800px;
     height: 120px;
