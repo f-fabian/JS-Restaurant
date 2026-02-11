@@ -1,0 +1,33 @@
+<!-- index.html - main file to load game -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Burachok JS Bar</title>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    
+    <!-- Game canvas -->
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+    <!-- User's code panel -->
+    <textarea id="codeInput">
+        moveToCustomer();
+        serve();
+    </textarea>
+
+    <!-- "RUN" button -->
+    <button id="runBtn">RUN</button>
+
+    <!-- Scripts load -->
+    <script src="js/robot.js"></script>
+    <script src="js/customer.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>

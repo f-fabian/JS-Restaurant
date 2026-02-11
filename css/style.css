@@ -1,0 +1,13 @@
+/* estilo simple para mock */
+
+body {
+    background: #222;
+    color: white;
+    font-family: monospace;
+}
+
+#codeInput {
+    width: 800px;
+    height: 120px;
+    margin-top: 10px;
+}
