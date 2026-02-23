@@ -11,7 +11,6 @@ export class Game {
     draw() {
         this.customers.forEach(c => c.draw(this.ctx));
         this.robots.forEach(r => r.draw(this.ctx));
-        if 
         this.cocktails.forEach(c => c.draw(this.ctx, 95, 100));
     }
 }
