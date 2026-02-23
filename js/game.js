@@ -1,28 +1,16 @@
 // game.js - game status control
 
-class Game {
-
-    constructor(ctx) {
+export class Game {
+    constructor(robots, customers, cocktails, ctx) {
+        this.robots = robots;
+        this.customers = customers;
+        this.cocktails = cocktails;
         this.ctx = ctx;
-
-        // entities creation
-        this.robot = new Robot();
-        this.customer = new Customer();
     }
 
-    update() {
-
-        // updates robot status
-        this.robot.update();
-    }
-
-    draw(){
-
-        // clean screen
-        this.ctx.clearRect(0, 0, 800, 500);
-
-        // draw entities
-        this.robot.draw(this.ctx);
-        this.customer.drawCustomer(this.ctx);
+    draw() {
+        this.customers.forEach(c => c.draw(this.ctx));
+        this.robots.forEach(r => r.draw(this.ctx));
+        this.cocktails.forEach(c => c.draw(this.ctx, 95, 100));
     }
 }

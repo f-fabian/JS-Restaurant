@@ -1,21 +1,11 @@
-// ui.js - functions called by RUN button
+// ui.js 
 
-function moveToCustomer() {
-    
-    // moves robot to customer
-    game.robot.moveTo(
-        game.customer.x - 50,
-        game.customer.y
-    )
-};
+import { executeCode } from "./parser";
 
-function takeOrder() {
-    if (game.robot.x === game.customer.x - 50) {
-        game.customer.drawOrder(ctx);
-    }
-};
+const codeInput = document.getElementById("codeInput");
+const runButton = document.getElementById("runBtn");
 
-function serve() {
-    // serving simulation
-    console.log("Order Served...");
-}
+runButton.addEventListener("click", async () => {
+    const code = codeInput.value;
+    await executeCode(code, robot, customer);
+});
