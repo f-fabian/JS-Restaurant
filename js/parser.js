@@ -1,21 +1,38 @@
 //parser.js - parses users command input
 
-export async function executeCode(code, robot, customer,ctx) {
-    const lines = code.split("\n").map(line => line.trim());
+import { POSITIONS } from './game.js';
 
-    const commands = {
-        "moveToCustomer();": () => robot.moveToCustomer(customer),
-        "takeOrder();": () => robot.takeOrder(),
-        "drawOrder();": () => customer.drawOrder(ctx),
-        "backToInitialPosition();": () => robot.backToInitialPosition(),
-        "moveToCocktail();": () => robot.moveToCocktail({x: 95, y: 100}),
-        "serve();": () => robot.serve(),
-        "moveTo();": () => robot.moveTo({x: 95, y: 100})
+export async function executeCode(code, robot, customer, cocktail, addMoney) {
+    const lines = code.split("\n").map(line => line.trim()).filter(Boolean);
 
-    };
+    for (const line of lines) {
 
-    for (let line of lines) {
-        const command = commands[line];
-        if (command) await command();
+        // moveTo(id)
+        const moveToMatch = line.match(/^moveTo\((\d+)\);?$/);
+        if (moveToMatch) {
+            await robot.moveTo(parseInt(moveToMatch[1]));
+            continue;
+        }
+
+        // testPosition(id)
+        const testPosMatch = line.match(/^testPosition\((\d+)\);?$/);
+        if (testPosMatch) {
+            const pos = POSITIONS.TABLES_SERVING.find(t => t.id === parseInt(testPosMatch[1]));
+            if (pos) cocktail.placeAt(pos.x, pos.y);
+            continue;
+        }
+
+        // static commands
+        switch (line) {
+            case "enterAndSit();":           await customer.enterAndSit(); break;
+            case "moveToCustomer();":        await robot.moveToCustomer(customer); break;
+            case "takeOrder();":             await robot.takeOrder(); break;
+            case "drawOrder();":             await customer.drawOrder(cocktail); break;
+            case "backToInitialPosition();": await robot.backToInitialPosition(); break;
+            case "moveToCocktail();":        await robot.moveToCocktail(cocktail); break;
+            case "serve();":                 await robot.serve(cocktail, customer); break;
+            case "consumeAndLeave();":       await customer.consumeAndLeave(addMoney); break;
+            case "cleanTable();":            await robot.cleanTable(cocktail); break;
+        }
     }
 }

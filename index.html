@@ -9,23 +9,32 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    
-    <!-- Game canvas -->
-    <canvas id="gameCanvas" width="800" height="500"></canvas>
 
-    <!-- User's code panel -->
-    <textarea id="codeInput">
-        moveToCustomer();
-        takeOrder();
-        drawOrder();
-        moveToCocktail();
-        moveToCustomer();
-        serve();
-        backToInitialPosition();
-    </textarea>
+    <div id="layout">
 
-    <!-- "RUN" button -->
-    <button id="runBtn">RUN</button>
+        <!-- Game canvas -->
+        <div id="gameContainer">
+            <canvas id="gameCanvas"></canvas>
+            <div id="moneyDisplay">$ 0</div>
+            <div id="customerDisplay">👤 0</div>
+        </div>
+
+        <!-- Right panel -->
+        <div id="codePanel">
+            <h3 id="consolePanelTitle">Console</h3>
+            <textarea id="consoleInput">
+while (customers) {
+    moveToCustomer();
+    takeOrder();
+    moveToCocktail();
+    serve();
+    cleanTable();
+}
+</textarea>
+            <button id="runBtn">RUN</button>
+        </div>
+
+    </div>
 
     <!-- Scripts load -->
     <script type="module" src="./js/main.js"></script>
