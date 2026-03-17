@@ -52,49 +52,103 @@ html, body {
     border: 1px solid #7ecfcf;
 }
 
-/* ── Console floating panel ───────────────────────────────────── */
-#codePanel {
+/* ── Floating windows ─────────────────────────────────────────── */
+.wm-window {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 300px;
-    background: #2a2a2a;
-    border: 2px solid #444;
-    border-radius: 6px;
     display: flex;
     flex-direction: column;
-    padding: 12px;
-    gap: 10px;
-    z-index: 10;
-}
-
-#consolePanelTitle {
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #aaa;
-    border-bottom: 1px solid #444;
-    padding-bottom: 8px;
-}
-
-#consoleInput {
-    height: 140px;
-    background: #111;
-    color: #0f0;
-    border: 1px solid #444;
-    padding: 10px;
+    background: #1e1e1e;
+    border: 1px solid #555;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    overflow: hidden;
+    min-width: 200px;
+    min-height: 36px;
     font-family: monospace;
-    font-size: 13px;
-    resize: none;
-    outline: none;
-    border-radius: 3px;
+    color: #e0e0e0;
 }
 
+.wm-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #2d2d2d;
+    border-bottom: 1px solid #555;
+    padding: 0 8px;
+    height: 34px;
+    cursor: grab;
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.wm-titlebar.wm-dragging {
+    cursor: grabbing;
+}
+
+.wm-title {
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #ccc;
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.wm-title-input {
+    flex: 1;
+    background: #111;
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 12px;
+    outline: none;
+}
+
+.wm-controls {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.wm-btn {
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: monospace;
+    font-weight: bold;
+    transition: opacity 0.15s;
+}
+
+.wm-btn-min   { background: #f0c040; color: #222; }
+.wm-btn-close { background: #e05050; color: #fff; }
+
+.wm-btn:hover { opacity: 0.8; }
+
+.wm-content {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+}
+
+/* ── RUN button (inside Controls window) ─────────────────────── */
 #runBtn {
+    width: 100%;
     background: #0a0;
     color: white;
     border: none;
-    padding: 10px;
+    padding: 8px;
     font-family: monospace;
     font-size: 14px;
     font-weight: bold;
@@ -103,5 +157,5 @@ html, body {
     border-radius: 3px;
 }
 
-#runBtn:hover  { background: #0d0; }
-#runBtn:disabled { background: #050; color: #aaa; cursor: default; }
+#runBtn:hover    { background: #0d0; }
+#runBtn:disabled { background: #050; color: #666; cursor: default; }

@@ -4,8 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Burachok JS Bar</title>
-
-    <!-- Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -16,22 +14,6 @@
     <!-- HUD overlays -->
     <div id="moneyDisplay">$ 0</div>
     <div id="customerDisplay">👤 0</div>
-
-    <!-- Console floating panel -->
-    <div id="codePanel">
-        <h3 id="consolePanelTitle">Console</h3>
-        <textarea id="consoleInput">
-while (customers) {
-    moveToCustomer();
-    takeOrder();
-    moveToCocktail();
-    serve();
-    backToInitialPosition();
-    cleanTable();
-}
-</textarea>
-        <button id="runBtn">RUN</button>
-    </div>
 
     <!-- Scripts load -->
     <script type="module" src="./js/main.js"></script>

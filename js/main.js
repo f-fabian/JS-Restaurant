@@ -1,9 +1,10 @@
 // main.js - game start
 
-import { Robot }    from "./robot.js";
-import { Customer } from "./customer.js";
-import { Game }     from "./game.js";
-import { Cocktail } from "./cocktail.js";
+import { Robot }         from "./robot.js";
+import { Customer }      from "./customer.js";
+import { Game }          from "./game.js";
+import { Cocktail }      from "./cocktail.js";
+import { WindowManager } from "./window-manager.js";
 
 // ── Canvas & context ──────────────────────────────────────────────────
 const canvas = document.getElementById("gameCanvas");
@@ -50,22 +51,19 @@ function addCustomerCount() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
-const wait        = ms          => new Promise(r => setTimeout(r, ms));
-const randBetween = (min, max)  => min + Math.random() * (max - min);
+const wait        = ms         => new Promise(r => setTimeout(r, ms));
+const randBetween = (min, max) => min + Math.random() * (max - min);
 
 // ── Autonomous customer lifecycle ─────────────────────────────────────
-// Each customer loops: wait → enter → sit → robot serves → consume → pay → leave → wait …
 async function runCustomer(customer, cocktail, slot, initialDelay) {
     await wait(initialDelay);
 
     while (true) {
-        // Reset and make visible — customer "walks by and decides to enter"
         customer.reset();
         customer.visible = true;
         const seated = await customer.enterAndSit();
 
         if (!seated) {
-            // All tables occupied — customer turns back, tries again later
             customer.visible = false;
             await wait(randBetween(5000, 9000));
             continue;
@@ -73,44 +71,59 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
 
         const tableId = customer.tableId;
 
-        // Enqueue full service in the robot's FIFO queue.
-        // Awaiting the returned promise blocks until the robot finishes this task.
         await robot.enqueue(async () => {
             await robot.moveToCustomer(customer);
             await robot.takeOrder();
             await customer.drawOrder(cocktail, slot);
             await robot.moveToCocktail(cocktail);
             await robot.serve(cocktail, customer);
-            // Pre-mark dirty immediately so the idle timer sees pending work
-            // before cleanTable is formally enqueued (which happens ~4s later).
             Customer._dirtyTables.add(customer.tableId);
         });
 
-        // Customer consumes then pays and walks out (robot is free during this time)
         await customer.consumeAndLeave(() => {
             addMoney(5);
             addCustomerCount();
         });
 
-        // Enqueue table cleanup — robot handles it when free.
-        // Only after cleaning is the table available for new customers.
         robot.enqueue(async () => {
             await robot.cleanTable(cocktail, tableId);
             Customer.markTableCleaned(tableId);
         });
 
-        // Random pause before this customer re-enters
         await wait(randBetween(5000, 14000));
     }
 }
 
-// Start the simulation on RUN click (only once)
-const runBtn = document.getElementById("runBtn");
-runBtn.addEventListener("click", () => {
-    runBtn.disabled = true;
-    runBtn.textContent = "RUNNING";
+// ── Window Manager ────────────────────────────────────────────────────
+const wm = new WindowManager();
 
-    // Stagger initial entries so the bar gradually comes to life
+// Controls window — anchored to the bottom-right corner
+const WIN_W = 200;
+const WIN_H = 80;
+const { win: controlsWin, content: controlsContent } = wm.spawn({
+    title:  'Controls',
+    x:      window.innerWidth  - WIN_W - 20,
+    y:      window.innerHeight - WIN_H - 20,
+    width:  WIN_W,
+    height: WIN_H,
+});
+
+// Re-anchor to bottom-right whenever the viewport changes.
+window.addEventListener('resize', () => {
+    controlsWin.style.left = `${window.innerWidth  - WIN_W - 20}px`;
+    controlsWin.style.top  = `${window.innerHeight - WIN_H - 20}px`;
+});
+
+const runBtn = document.createElement('button');
+runBtn.id          = 'runBtn';
+runBtn.textContent = 'RUN';
+controlsContent.style.padding = '8px';
+controlsContent.appendChild(runBtn);
+
+runBtn.addEventListener('click', () => {
+    runBtn.disabled    = true;
+    runBtn.textContent = 'RUNNING';
+
     runCustomer(customers[0], cocktails[0], 0, randBetween(3000,  7000));
     runCustomer(customers[1], cocktails[1], 1, randBetween(9000,  15000));
     runCustomer(customers[2], cocktails[2], 2, randBetween(16000, 24000));
