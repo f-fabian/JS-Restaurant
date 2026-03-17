@@ -177,20 +177,36 @@ html, body {
     border-color: #888;
 }
 
-/* ── RUN button (inside Controls window) ─────────────────────── */
-#runBtn {
-    width: 100%;
-    background: #0a0;
-    color: white;
-    border: none;
-    padding: 8px;
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    letter-spacing: 2px;
-    border-radius: 3px;
+/* ── Controls window buttons ──────────────────────────────────── */
+.wm-controls-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px !important;
+    align-items: center;
 }
 
-#runBtn:hover    { background: #0d0; }
-#runBtn:disabled { background: #050; color: #666; cursor: default; }
+#runBtn, #stepBtn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    padding: 8px 6px;
+    font-family: monospace;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+#runBtn         { background: #1a7a1a; color: #afffaf; }
+#runBtn:hover   { background: #22a022; }
+
+#stepBtn        { background: #1a4a7a; color: #afd4ff; }
+#stepBtn:hover  { background: #2260aa; }
+
+#runBtn:disabled,
+#stepBtn:disabled { opacity: 0.35; cursor: default; }

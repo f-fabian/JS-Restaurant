@@ -98,8 +98,8 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
 const wm = new WindowManager();
 
 // Controls window — anchored to the bottom-right corner
-const WIN_W = 200;
-const WIN_H = 80;
+const WIN_W = 240;
+const WIN_H = 90;
 const { win: controlsWin, content: controlsContent } = wm.spawn({
     title:  'Controls',
     x:      window.innerWidth  - WIN_W - 20,
@@ -108,23 +108,34 @@ const { win: controlsWin, content: controlsContent } = wm.spawn({
     height: WIN_H,
 });
 
-// Re-anchor to bottom-right whenever the viewport changes.
 window.addEventListener('resize', () => {
     controlsWin.style.left = `${window.innerWidth  - WIN_W - 20}px`;
     controlsWin.style.top  = `${window.innerHeight - WIN_H - 20}px`;
 });
 
-const runBtn = document.createElement('button');
-runBtn.id          = 'runBtn';
-runBtn.textContent = 'RUN';
-controlsContent.style.padding = '8px';
-controlsContent.appendChild(runBtn);
+controlsContent.className += ' wm-controls-bar';
+
+const runBtn  = document.createElement('button');
+runBtn.id        = 'runBtn';
+runBtn.innerHTML = '▶ <span>RUN</span>';
+
+const stepBtn = document.createElement('button');
+stepBtn.id        = 'stepBtn';
+stepBtn.innerHTML = '⤵ <span>STEP</span>';
+
+controlsContent.append(runBtn, stepBtn);
 
 runBtn.addEventListener('click', () => {
-    runBtn.disabled    = true;
-    runBtn.textContent = 'RUNNING';
+    runBtn.disabled      = true;
+    runBtn.innerHTML     = '▶ <span>RUNNING</span>';
+    stepBtn.disabled     = true;
 
     runCustomer(customers[0], cocktails[0], 0, randBetween(3000,  7000));
     runCustomer(customers[1], cocktails[1], 1, randBetween(9000,  15000));
     runCustomer(customers[2], cocktails[2], 2, randBetween(16000, 24000));
 }, { once: true });
+
+// STEP — reserved for line-by-line code execution (wired in future tasks)
+stepBtn.addEventListener('click', () => {
+    console.log('[STEP] not yet implemented');
+});
