@@ -87,6 +87,7 @@ html, body {
 }
 
 .wm-title {
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
     font-size: 12px;
     font-weight: bold;
     letter-spacing: 0.5px;
@@ -162,26 +163,13 @@ html, body {
 .wm-resize-se { bottom: -4px; right: -4px;  width: 14px; height: 14px; }
 .wm-resize-sw { bottom: -4px; left: -4px;   width: 14px; height: 14px; }
 
-/* ── CodeMirror transparency override ────────────────────────── */
-/* CM6's internal styles have higher specificity than EditorView.theme(),  */
-/* so we override here with !important to let the canvas show through.     */
-.cm-editor,
+/* ── CodeMirror opacity ───────────────────────────────────────── */
+/* Let the canvas show through slightly (85% solid) */
 .cm-editor .cm-scroller {
     background: transparent !important;
 }
-.cm-editor .cm-gutters {
-    background: rgba(20, 20, 20, 0.55) !important;
-    border-right-color: rgba(80, 80, 80, 0.4) !important;
-}
 .cm-editor .cm-content {
     background: transparent !important;
-}
-/* Keep active-line highlight readable over the transparent background */
-.cm-editor .cm-activeLine {
-    background: rgba(30, 42, 30, 0.7) !important;
-}
-.cm-editor .cm-activeLineGutter {
-    background: rgba(37, 37, 37, 0.8) !important;
 }
 
 /* ── Taskbar (bottom-left, restore pills) ─────────────────────── */

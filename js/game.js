@@ -136,12 +136,14 @@ export class Game {
         this.background = new Image();
         this.background.src = "/assets/background.png";
 
-        const resize = () => {
-            this.canvas.width  = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-        };
-        resize();
-        window.addEventListener('resize', resize);
+        const container = this.canvas.parentElement;
+        this.canvas.width = container.clientWidth;
+        this.canvas.height = container.clientHeight;
+
+        window.addEventListener('resize', () => {
+            this.canvas.width = container.clientWidth;
+            this.canvas.height = container.clientHeight;
+        });
     }
 
     draw() {

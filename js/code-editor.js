@@ -1,68 +1,112 @@
 // code-editor.js — thin wrapper around CodeMirror 6.
 //
-// Imported from CDN (esm.sh) — no build step needed.
-// Provides: JS syntax highlighting, line numbers, active-line highlight.
+// All CM6 modules come from a single local bundle (js/cm.bundle.min.js)
+// built with esbuild — zero duplicate instances, zero CDN issues.
 
-import { EditorView, basicSetup }       from 'https://esm.sh/codemirror@6';
-import { javascript }                   from 'https://esm.sh/@codemirror/lang-javascript@6';
-import { EditorState }                  from 'https://esm.sh/@codemirror/state@6';
-import { keymap }                       from 'https://esm.sh/@codemirror/view@6';
-import { defaultKeymap, historyKeymap } from 'https://esm.sh/@codemirror/commands@6';
+import {
+    EditorView, EditorState, keymap,
+    lineNumbers, highlightActiveLineGutter, highlightSpecialChars,
+    drawSelection, dropCursor, rectangularSelection, crosshairCursor,
+    highlightActiveLine, history, defaultKeymap, historyKeymap,
+    syntaxHighlighting, defaultHighlightStyle, indentOnInput,
+    bracketMatching, foldGutter, foldKeymap,
+    closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap,
+    highlightSelectionMatches, searchKeymap, lintKeymap,
+    javascript, oneDark,
+} from './cm.bundle.min.js';
+
+/* ── Editor font stack ────────────────────────────────────────── */
+const editorFont = '"Cascadia Code", "Fira Code", "Consolas", monospace';
+
+/* ── basicSetup equivalent ─────────────────────────────────────── */
+const setup = [
+    lineNumbers(),
+    highlightActiveLineGutter(),
+    highlightSpecialChars(),
+    history(),
+    foldGutter(),
+    drawSelection(),
+    dropCursor(),
+    EditorState.allowMultipleSelections.of(true),
+    indentOnInput(),
+    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    bracketMatching(),
+    closeBrackets(),
+    autocompletion(),
+    rectangularSelection(),
+    crosshairCursor(),
+    highlightActiveLine(),
+    highlightSelectionMatches(),
+    keymap.of([
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
+        ...completionKeymap,
+        ...lintKeymap,
+    ]),
+];
 
 /**
  * Mount a CodeMirror 6 editor inside `parent`.
  *
  * @param {HTMLElement} parent      - Container element (wm-content div).
  * @param {string}      initialCode - Starting source code.
- * @returns {EditorView}            - CM6 view instance (use .state.doc.toString() to read code).
+ * @returns {EditorView}            - CM6 view instance.
  */
 export function createCodeEditor(parent, initialCode = '') {
-    // Make this zone transparent so the canvas shows through.
-    // Title bar and button bar live outside this element and stay solid.
     parent.style.padding    = '0';
     parent.style.overflow   = 'hidden';
     parent.style.background = 'transparent';
+    parent.setAttribute('spellcheck', 'false');
+    parent.setAttribute('autocorrect', 'off');
+    parent.setAttribute('autocapitalize', 'off');
 
     const view = new EditorView({
-        state: EditorState.create({
-            doc: initialCode,
-            extensions: [
-                basicSetup,
-                javascript(),
-                keymap.of([...defaultKeymap, ...historyKeymap]),
-                EditorView.theme({
-                    '&': {
-                        height: '100%',
-                        fontSize: '13px',
-                        fontFamily: '"Fira Code", "Cascadia Code", monospace',
-                        background: 'transparent',
-                    },
-                    '.cm-scroller': { overflow: 'auto', background: 'transparent' },
-                    '.cm-content':  { caretColor: '#0f0', background: 'transparent' },
-                    '.cm-gutters': {
-                        background: 'rgba(20, 20, 20, 0.55)',
-                        borderRight: '1px solid rgba(80,80,80,0.4)',
-                        color: '#666',
-                    },
-                    '.cm-activeLineGutter': { background: 'rgba(37,37,37,0.8)', color: '#aaa' },
-                    '.cm-activeLine':       { background: 'rgba(30,42,30,0.75)' },
-                    '.cm-selectionBackground': { background: '#264f78 !important' },
-                    '.cm-cursor': { borderLeftColor: '#0f0' },
-                }),
-                EditorView.editable.of(true),
-            ],
-        }),
-        parent,
-    });
+        doc: initialCode,
+        extensions: [
+            setup,
+            javascript(),
+            oneDark,
 
-    // Direct DOM override — CM6 theme specificity can be beaten by injected
-    // styles from basicSetup. Setting inline styles guarantees transparency.
-    requestAnimationFrame(() => {
-        const cm = view.dom;
-        cm.style.background = 'transparent';
-        cm.querySelectorAll('.cm-scroller, .cm-content').forEach(el => {
-            el.style.background = 'transparent';
-        });
+            EditorView.theme({
+                '&': {
+                    height: '100%',
+                    fontSize: '14px',
+                    fontFamily: editorFont,
+                    background: 'rgba(30, 30, 30, 0.9)',
+                },
+                '.cm-scroller': { overflow: 'auto', background: 'transparent' },
+                '.cm-content': {
+                    caretColor: '#aeafad',
+                    background: 'transparent',
+                    fontFamily: editorFont,
+                    lineHeight: '1.6',
+                },
+                '.cm-gutters': {
+                    background: 'rgba(25, 25, 25, 0.9)',
+                    borderRight: '1px solid rgba(80,80,80,0.4)',
+                    fontFamily: editorFont,
+                },
+                '.cm-activeLineGutter': { background: 'rgba(37,37,37,0.8)', color: '#c6c6c6' },
+                '.cm-activeLine':       { background: 'rgba(40, 40, 40, 0.6)' },
+                '.cm-selectionBackground': { background: '#264f78 !important' },
+                '.cm-cursor': { borderLeftColor: '#aeafad', borderLeftWidth: '2px' },
+                '.cm-matchingBracket': {
+                    background: 'rgba(0, 100, 0, 0.3)',
+                    outline: '1px solid rgba(100, 100, 100, 0.5)',
+                },
+            }, { dark: true }),
+
+            EditorView.editable.of(true),
+            EditorView.contentAttributes.of({
+                spellcheck: 'false',
+                autocorrect: 'off',
+                autocapitalize: 'off',
+            }),
+        ],
+        parent,
     });
 
     return view;
