@@ -1,17 +1,31 @@
 // window-manager.js — spawns and manages floating HTML windows over the canvas.
 
+const MIN_W = 160;
+const MIN_H = 80;
+
+// 8 resize handles: direction string encodes which edges move.
+// e = right edge,  w = left edge,  s = bottom edge,  n = top edge.
+const RESIZE_HANDLES = [
+    { dir: 'n',  cursor: 'n-resize'  },
+    { dir: 'ne', cursor: 'ne-resize' },
+    { dir: 'e',  cursor: 'e-resize'  },
+    { dir: 'se', cursor: 'se-resize' },
+    { dir: 's',  cursor: 's-resize'  },
+    { dir: 'sw', cursor: 'sw-resize' },
+    { dir: 'w',  cursor: 'w-resize'  },
+    { dir: 'nw', cursor: 'nw-resize' },
+];
+
 export class WindowManager {
 
     constructor() {
         this._z       = 200;
         this._windows = new Set();
 
-        // Taskbar — holds restore pills for closed windows (bottom-left)
-        this._taskbar = document.createElement('div');
+        this._taskbar    = document.createElement('div');
         this._taskbar.id = 'wm-taskbar';
         document.body.appendChild(this._taskbar);
 
-        // Keep every open window inside the viewport on resize.
         window.addEventListener('resize', () => {
             this._windows.forEach(win => this._clamp(win));
         });
@@ -36,14 +50,11 @@ export class WindowManager {
         titleEl.className   = 'wm-title';
         titleEl.textContent = title;
 
-        // dblclick on the whole bar (setPointerCapture redirects events to bar,
-        // so a listener on titleEl alone would never fire).
         bar.addEventListener('dblclick', e => {
             if (e.target.closest('.wm-btn')) return;
             this._editTitle(bar, titleEl);
         });
 
-        // ── Control buttons ────────────────────────────────────────
         const controls = document.createElement('div');
         controls.className = 'wm-controls';
 
@@ -63,6 +74,7 @@ export class WindowManager {
         // ── Behaviours ─────────────────────────────────────────────
         this._windows.add(win);
         this._makeDraggable(win, bar);
+        this._makeResizable(win);
         this._makeFocusable(win);
         this._wireMinimize(win, content, minBtn, height);
 
@@ -121,12 +133,28 @@ export class WindowManager {
     }
 
     _wireMinimize(win, content, btn, originalHeight) {
-        let minimized = false;
+        let minimized       = false;
+        let originalDisplay = null;
+
         btn.addEventListener('click', () => {
+            if (originalDisplay === null) {
+                originalDisplay = content.style.display || '';
+            }
+
             minimized = !minimized;
-            content.style.display = minimized ? 'none' : '';
-            win.style.height      = minimized ? '' : `${originalHeight}px`;
-            btn.textContent       = minimized ? '+' : '−';
+
+            if (minimized) {
+                content.style.display = 'none';
+                win.style.height      = '';
+            } else {
+                content.style.display = originalDisplay;
+                win.style.height      = `${originalHeight}px`;
+                requestAnimationFrame(() =>
+                    window.dispatchEvent(new Event('resize'))
+                );
+            }
+
+            btn.textContent = minimized ? '+' : '−';
         });
     }
 
@@ -149,8 +177,6 @@ export class WindowManager {
 
             handle.setPointerCapture(e.pointerId);
             handle.classList.add('wm-dragging');
-            // No e.preventDefault() — it would suppress dblclick on titleEl.
-            // user-select:none in CSS already prevents text selection.
         });
 
         handle.addEventListener('pointermove', e => {
@@ -168,13 +194,72 @@ export class WindowManager {
         });
     }
 
+    _makeResizable(win) {
+        RESIZE_HANDLES.forEach(({ dir, cursor }) => {
+            const el = document.createElement('div');
+            el.className        = `wm-resize-handle wm-resize-${dir}`;
+            el.style.cursor     = cursor;
+            win.appendChild(el);
+
+            let startX, startY, startW, startH, startL, startT;
+
+            el.addEventListener('pointerdown', e => {
+                e.stopPropagation(); // don't trigger drag or focus-bump twice
+
+                startX = e.clientX;
+                startY = e.clientY;
+                startW = win.offsetWidth;
+                startH = win.offsetHeight;
+                startL = parseInt(win.style.left) || 0;
+                startT = parseInt(win.style.top)  || 0;
+
+                el.setPointerCapture(e.pointerId);
+                e.preventDefault();
+            });
+
+            el.addEventListener('pointermove', e => {
+                if (!el.hasPointerCapture(e.pointerId)) return;
+
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+
+                let w = startW, h = startH, l = startL, t = startT;
+
+                if (dir.includes('e')) w = Math.max(MIN_W, startW + dx);
+                if (dir.includes('s')) h = Math.max(MIN_H, startH + dy);
+                if (dir.includes('w')) {
+                    w = Math.max(MIN_W, startW - dx);
+                    l = startL + startW - w;
+                }
+                if (dir.includes('n')) {
+                    h = Math.max(MIN_H, startH - dy);
+                    t = startT + startH - h;
+                }
+
+                // Clamp position to viewport
+                l = Math.max(0, Math.min(l, window.innerWidth  - w));
+                t = Math.max(0, Math.min(t, window.innerHeight - h));
+
+                win.style.width  = `${w}px`;
+                win.style.height = `${h}px`;
+                win.style.left   = `${l}px`;
+                win.style.top    = `${t}px`;
+            });
+
+            el.addEventListener('pointerup', e => {
+                if (el.hasPointerCapture(e.pointerId)) {
+                    el.releasePointerCapture(e.pointerId);
+                    // Notify size-aware children (e.g. CodeMirror) once resize ends.
+                    window.dispatchEvent(new Event('resize'));
+                }
+            });
+        });
+    }
+
     _clamp(win) {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        const w  = win.offsetWidth;
-        const h  = win.offsetHeight;
-
-        win.style.left = `${Math.min(Math.max(0, parseInt(win.style.left) || 0), vw - w)}px`;
-        win.style.top  = `${Math.min(Math.max(0, parseInt(win.style.top)  || 0), vh - h)}px`;
+        win.style.left = `${Math.min(Math.max(0, parseInt(win.style.left) || 0), vw - win.offsetWidth)}px`;
+        win.style.top  = `${Math.min(Math.max(0, parseInt(win.style.top)  || 0), vh - win.offsetHeight)}px`;
     }
 }

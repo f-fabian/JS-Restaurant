@@ -97,10 +97,10 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
 // ── Window Manager ────────────────────────────────────────────────────
 const wm = new WindowManager();
 
-// Controls window — anchored to the bottom-right corner
-const WIN_W = 240;
-const WIN_H = 90;
-const { win: controlsWin, content: controlsContent } = wm.spawn({
+// ── Controls window ───────────────────────────────────────────────────
+const WIN_W = 320;
+const WIN_H = 380;
+const { content: controlsContent } = wm.spawn({
     title:  'Controls',
     x:      window.innerWidth  - WIN_W - 20,
     y:      window.innerHeight - WIN_H - 20,
@@ -108,12 +108,20 @@ const { win: controlsWin, content: controlsContent } = wm.spawn({
     height: WIN_H,
 });
 
-window.addEventListener('resize', () => {
-    controlsWin.style.left = `${window.innerWidth  - WIN_W - 20}px`;
-    controlsWin.style.top  = `${window.innerHeight - WIN_H - 20}px`;
-});
 
-controlsContent.className += ' wm-controls-bar';
+// Content = editor (flex:1) + button bar (fixed height)
+controlsContent.style.cssText =
+    'display:flex; flex-direction:column; padding:0; overflow:hidden; background:transparent;';
+
+// Editor area — fills available space
+const editorWrap = document.createElement('div');
+editorWrap.style.cssText = 'flex:1; overflow:hidden; min-height:0;';
+controlsContent.appendChild(editorWrap);
+
+// Button bar — sits below the editor
+const btnBar = document.createElement('div');
+btnBar.className = 'wm-controls-bar';
+controlsContent.appendChild(btnBar);
 
 const runBtn  = document.createElement('button');
 runBtn.id        = 'runBtn';
@@ -123,19 +131,50 @@ const stepBtn = document.createElement('button');
 stepBtn.id        = 'stepBtn';
 stepBtn.innerHTML = '⤵ <span>STEP</span>';
 
-controlsContent.append(runBtn, stepBtn);
+btnBar.append(runBtn, stepBtn);
+
+// Mount CodeMirror editor — loaded asynchronously so a CDN failure
+// never prevents the canvas / game loop from starting.
+const initialCode =
+`while (customers) {
+    moveToCustomer();
+    takeOrder();
+    moveToCocktail();
+    serve();
+    backToInitialPosition();
+    cleanTable();
+}`;
+
+let editor = null;
+
+import('./code-editor.js')
+    .then(({ createCodeEditor }) => {
+        editor = createCodeEditor(editorWrap, initialCode);
+    })
+    .catch(err => {
+        console.warn('[editor] failed to load CodeMirror:', err);
+        // Fallback: plain textarea so the window stays usable
+        const ta = document.createElement('textarea');
+        ta.value = initialCode;
+        ta.style.cssText =
+            'width:100%;height:100%;background:#111;color:#0f0;' +
+            'border:none;padding:10px;font-family:monospace;font-size:13px;resize:none;outline:none;';
+        editorWrap.appendChild(ta);
+        editor = { state: { doc: { toString: () => ta.value } } };
+    });
 
 runBtn.addEventListener('click', () => {
-    runBtn.disabled      = true;
-    runBtn.innerHTML     = '▶ <span>RUNNING</span>';
-    stepBtn.disabled     = true;
+    runBtn.disabled  = true;
+    runBtn.innerHTML = '▶ <span>RUNNING</span>';
+    stepBtn.disabled = true;
 
     runCustomer(customers[0], cocktails[0], 0, randBetween(3000,  7000));
     runCustomer(customers[1], cocktails[1], 1, randBetween(9000,  15000));
     runCustomer(customers[2], cocktails[2], 2, randBetween(16000, 24000));
 }, { once: true });
 
-// STEP — reserved for line-by-line code execution (wired in future tasks)
+// STEP — line-by-line execution (wired up in a future task)
 stepBtn.addEventListener('click', () => {
-    console.log('[STEP] not yet implemented');
+    const code = editor.state.doc.toString();
+    console.log('[STEP] code in editor:', code);
 });

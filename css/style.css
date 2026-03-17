@@ -57,7 +57,8 @@ html, body {
     position: fixed;
     display: flex;
     flex-direction: column;
-    background: #1e1e1e;
+    background: transparent;   /* each zone sets its own background */
+    opacity: 0.88;
     border: 1px solid #555;
     border-radius: 6px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
@@ -140,6 +141,47 @@ html, body {
     flex: 1;
     overflow: auto;
     padding: 12px;
+    background: #1e1e1e;   /* default solid background for non-editor windows */
+}
+
+/* ── Resize handles (8 directions) ───────────────────────────── */
+.wm-resize-handle {
+    position: absolute;
+    z-index: 20;
+}
+
+/* Edges */
+.wm-resize-n  { top: -4px;  left: 8px;  right: 8px;  height: 8px; }
+.wm-resize-s  { bottom: -4px; left: 8px; right: 8px; height: 8px; }
+.wm-resize-e  { right: -4px; top: 8px; bottom: 8px;  width: 8px; }
+.wm-resize-w  { left: -4px;  top: 8px; bottom: 8px;  width: 8px; }
+
+/* Corners — slightly larger for easier grabbing */
+.wm-resize-ne { top: -4px;    right: -4px;  width: 14px; height: 14px; }
+.wm-resize-nw { top: -4px;    left: -4px;   width: 14px; height: 14px; }
+.wm-resize-se { bottom: -4px; right: -4px;  width: 14px; height: 14px; }
+.wm-resize-sw { bottom: -4px; left: -4px;   width: 14px; height: 14px; }
+
+/* ── CodeMirror transparency override ────────────────────────── */
+/* CM6's internal styles have higher specificity than EditorView.theme(),  */
+/* so we override here with !important to let the canvas show through.     */
+.cm-editor,
+.cm-editor .cm-scroller {
+    background: transparent !important;
+}
+.cm-editor .cm-gutters {
+    background: rgba(20, 20, 20, 0.55) !important;
+    border-right-color: rgba(80, 80, 80, 0.4) !important;
+}
+.cm-editor .cm-content {
+    background: transparent !important;
+}
+/* Keep active-line highlight readable over the transparent background */
+.cm-editor .cm-activeLine {
+    background: rgba(30, 42, 30, 0.7) !important;
+}
+.cm-editor .cm-activeLineGutter {
+    background: rgba(37, 37, 37, 0.8) !important;
 }
 
 /* ── Taskbar (bottom-left, restore pills) ─────────────────────── */
@@ -183,6 +225,8 @@ html, body {
     gap: 8px;
     padding: 10px !important;
     align-items: center;
+    background: #1e1e1e;   /* solid — sits below the transparent editor area */
+    border-top: 1px solid #333;
 }
 
 #runBtn, #stepBtn {
