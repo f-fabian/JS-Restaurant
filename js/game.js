@@ -10,12 +10,12 @@ export const POSITIONS = {
     ],
     
     TABLES_SEATS: [
-        {id: 1, x: 420, y: 440}, {id: 2, x: 550, y: 500},
-        {id: 3, x: 570, y: 360}, {id: 4, x: 700, y: 430},
-        {id: 5, x: 720, y: 290}, {id: 6, x: 850, y: 360},
-        {id: 7, x: 630, y: 540}, {id: 8, x: 770, y: 610},
-        {id: 9, x: 780, y: 470}, {id: 10, x: 910, y: 530},
-        {id: 11, x: 930, y: 400}, {id: 12, x: 1060, y: 460}
+        {id: 1, x: 420, y: 440}, {id: 2, x: 560, y: 510},
+        {id: 3, x: 570, y: 360}, {id: 4, x: 710, y: 440},
+        {id: 5, x: 720, y: 290}, {id: 6, x: 860, y: 370},
+        {id: 7, x: 630, y: 540}, {id: 8, x: 780, y: 620},
+        {id: 9, x: 780, y: 470}, {id: 10, x: 920, y: 540},
+        {id: 11, x: 930, y: 400}, {id: 12, x: 1070, y: 470}
     ],
 
     TABLES_SERVING: [
@@ -94,7 +94,7 @@ export const POSITIONS = {
     // Edges that connect the waypoints above (bidirectional)
     WAYPOINT_EDGES: [
         [1, 2],                                         // entry → UC left
-        [2, 25], [3, 26], [4, 27], [25, 26], [26, 27],                    // UC left ↕ bar
+        [3, 25], [3, 26], [4, 27], /*[25, 26], [26, 27]*/                    // UC left ↕ bar
         [2, 3], [3, 4], [4, 5],                         // upper corridor →
         [2, 6], [6, 7], [7, 8], [8, 9],                 // LC1 ↓
         [3, 10], [10, 11], [11, 12], [12, 13],          // LC2 ↓

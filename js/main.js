@@ -22,6 +22,9 @@ const cocktails = [
 
 const game = new Game(canvas, [robot], customers, cocktails, ctx);
 
+// Robot only returns home when no table is waiting to be cleaned.
+robot.setIdleCheck(() => Customer._dirtyTables.size === 0);
+
 // ── Main loop ─────────────────────────────────────────────────────────
 function loop() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -59,7 +62,14 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
         // Reset and make visible — customer "walks by and decides to enter"
         customer.reset();
         customer.visible = true;
-        await customer.enterAndSit();
+        const seated = await customer.enterAndSit();
+
+        if (!seated) {
+            // All tables occupied — customer turns back, tries again later
+            customer.visible = false;
+            await wait(randBetween(5000, 9000));
+            continue;
+        }
 
         const tableId = customer.tableId;
 
@@ -71,6 +81,9 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
             await customer.drawOrder(cocktail, slot);
             await robot.moveToCocktail(cocktail);
             await robot.serve(cocktail, customer);
+            // Pre-mark dirty immediately so the idle timer sees pending work
+            // before cleanTable is formally enqueued (which happens ~4s later).
+            Customer._dirtyTables.add(customer.tableId);
         });
 
         // Customer consumes then pays and walks out (robot is free during this time)
@@ -79,9 +92,11 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
             addCustomerCount();
         });
 
-        // Enqueue table cleanup — robot handles it when free
+        // Enqueue table cleanup — robot handles it when free.
+        // Only after cleaning is the table available for new customers.
         robot.enqueue(async () => {
             await robot.cleanTable(cocktail, tableId);
+            Customer.markTableCleaned(tableId);
         });
 
         // Random pause before this customer re-enters
