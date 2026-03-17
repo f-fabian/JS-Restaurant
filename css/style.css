@@ -142,6 +142,41 @@ html, body {
     padding: 12px;
 }
 
+/* ── Taskbar (bottom-left, restore pills) ─────────────────────── */
+#wm-taskbar {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    z-index: 300;
+    pointer-events: none;
+    max-width: calc(100vw - 20px);
+}
+
+.wm-taskbar-pill {
+    pointer-events: all;
+    background: rgba(30, 30, 30, 0.88);
+    color: #ccc;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(6px);
+    transition: background 0.15s, color 0.15s;
+}
+
+.wm-taskbar-pill:hover {
+    background: #3a3a3a;
+    color: #fff;
+    border-color: #888;
+}
+
 /* ── RUN button (inside Controls window) ─────────────────────── */
 #runBtn {
     width: 100%;
