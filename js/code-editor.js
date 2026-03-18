@@ -4,7 +4,7 @@
 // built with esbuild — zero duplicate instances, zero CDN issues.
 
 import {
-    EditorView, EditorState, keymap,
+    EditorView, EditorState, Decoration, StateEffect, StateField, keymap,
     lineNumbers, highlightActiveLineGutter, highlightSpecialChars,
     drawSelection, dropCursor, rectangularSelection, crosshairCursor,
     highlightActiveLine, history, defaultKeymap, historyKeymap, indentMore, indentLess,
@@ -14,6 +14,27 @@ import {
     highlightSelectionMatches, searchKeymap, lintKeymap,
     javascript, oneDark,
 } from './cm.bundle.min.js';
+
+/* ── Execution line highlight ────────────────────────────────────── */
+// StateEffect to set which line (1-based) is executing, or 0 to clear.
+const setExecLine = StateEffect.define();
+
+const execLineMark = Decoration.line({ class: 'cm-execLine' });
+
+const execLineField = StateField.define({
+    create()  { return Decoration.none; },
+    update(decos, tr) {
+        for (const e of tr.effects) {
+            if (e.is(setExecLine)) {
+                if (e.value <= 0) return Decoration.none;
+                const line = tr.state.doc.line(e.value);
+                return Decoration.set([execLineMark.range(line.from)]);
+            }
+        }
+        return decos;
+    },
+    provide: f => EditorView.decorations.from(f),
+});
 
 /* ── Editor font stack ────────────────────────────────────────── */
 const editorFont = '"Cascadia Code", "Fira Code", "Consolas", monospace';
@@ -81,6 +102,7 @@ export function createCodeEditor(parent, initialCode = '') {
         doc: initialCode,
         extensions: [
             setup,
+            execLineField,
             javascript(),
             oneDark,
 
@@ -111,6 +133,10 @@ export function createCodeEditor(parent, initialCode = '') {
                     background: 'rgba(0, 100, 0, 0.3)',
                     outline: '1px solid rgba(100, 100, 100, 0.5)',
                 },
+                '.cm-execLine': {
+                    background: 'rgba(255, 213, 79, 0.15)',
+                    borderLeft: '3px solid #ffd54f',
+                },
             }, { dark: true }),
 
             EditorView.editable.of(true),
@@ -124,4 +150,18 @@ export function createCodeEditor(parent, initialCode = '') {
     });
 
     return view;
+}
+
+/**
+ * Highlight a specific line as "currently executing".
+ * @param {EditorView} view  - CM6 editor instance.
+ * @param {number}     line  - 1-based line number to highlight, or 0 to clear.
+ */
+export function highlightLine(view, line) {
+    view.dispatch({ effects: setExecLine.of(line) });
+}
+
+/** Clear execution highlight. */
+export function clearHighlight(view) {
+    highlightLine(view, 0);
 }

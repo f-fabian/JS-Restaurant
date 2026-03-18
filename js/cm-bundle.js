@@ -5,12 +5,12 @@
 // into js/cm.bundle.min.js which is a single self-contained ESM file.
 
 // ── Core ──
-export { EditorView, keymap, lineNumbers, highlightActiveLineGutter,
+export { EditorView, Decoration, keymap, lineNumbers, highlightActiveLineGutter,
          highlightSpecialChars, drawSelection, dropCursor,
          rectangularSelection, crosshairCursor, highlightActiveLine
        } from '@codemirror/view';
 
-export { EditorState } from '@codemirror/state';
+export { EditorState, StateEffect, StateField } from '@codemirror/state';
 
 // ── Language support ──
 export { syntaxHighlighting, defaultHighlightStyle, indentOnInput,

@@ -13,7 +13,6 @@ const ctx    = canvas.getContext("2d");
 // ── Entities ──────────────────────────────────────────────────────────
 const robot = new Robot();
 
-// 3 customer/cocktail pairs — each pair owns a fixed bar slot (0/1/2)
 const customers = [new Customer(), new Customer(), new Customer()];
 const cocktails = [
     new Cocktail("Aperol Spritz", "/assets/aperol.png"),
@@ -23,7 +22,6 @@ const cocktails = [
 
 const game = new Game(canvas, [robot], customers, cocktails, ctx);
 
-// Robot only returns home when no table is waiting to be cleaned.
 robot.setIdleCheck(() => Customer._dirtyTables.size === 0);
 
 // ── Main loop ─────────────────────────────────────────────────────────
@@ -54,11 +52,14 @@ function addCustomerCount() {
 const wait        = ms         => new Promise(r => setTimeout(r, ms));
 const randBetween = (min, max) => min + Math.random() * (max - min);
 
-// ── Autonomous customer lifecycle ─────────────────────────────────────
-async function runCustomer(customer, cocktail, slot, initialDelay) {
+// ── Autonomous customer spawning ──────────────────────────────────────
+// Customers enter and sit on their own. The player's code controls the robot.
+let _spawningActive = false;
+
+async function spawnCustomerLoop(customer, initialDelay) {
     await wait(initialDelay);
 
-    while (true) {
+    while (_spawningActive) {
         customer.reset();
         customer.visible = true;
         const seated = await customer.enterAndSit();
@@ -69,28 +70,198 @@ async function runCustomer(customer, cocktail, slot, initialDelay) {
             continue;
         }
 
-        const tableId = customer.tableId;
+        // Wait until this customer leaves before spawning the next one in this slot
+        await new Promise(resolve => {
+            const check = () => {
+                if (!customer.seated && !customer.visible) resolve();
+                else setTimeout(check, 500);
+            };
+            // Customer hasn't been served yet — wait
+            check();
+        });
 
-        await robot.enqueue(async () => {
-            await robot.moveToCustomer(customer);
+        await wait(randBetween(3000, 10000));
+    }
+}
+
+function startSpawning() {
+    if (_spawningActive) return;
+    _spawningActive = true;
+    spawnCustomerLoop(customers[0], randBetween(1000, 3000));
+    spawnCustomerLoop(customers[1], randBetween(4000, 8000));
+    spawnCustomerLoop(customers[2], randBetween(8000, 14000));
+}
+
+// ── Robot proxy (sandbox for player code) ─────────────────────────────
+// Wraps robot methods so they auto-enqueue and use automatic context.
+// The player writes `robot.moveToCustomer()` — no params needed.
+
+// Methods available to the player. Filter this array to restrict by level.
+const ENABLED_METHODS = [
+    'moveToCustomer', 'takeOrder', 'moveToCocktail',
+    'serve', 'cleanTable', 'backToInitialPosition', 'moveTo',
+];
+
+function buildRobotProxy() {
+    // Automatic context — set by moveToCustomer(), used by all others
+    let _customer = null;
+    let _cocktail = null;
+    let _slot     = null;
+
+    // Tracks the last enqueued action's promise so __line can await it
+    let _lastAction = Promise.resolve();
+
+    // Find the next seated customer waiting to be served
+    function findWaitingCustomer() {
+        return customers.find(c => c.visible && c.seated && !c.served);
+    }
+
+    // Wait until a customer is seated and waiting
+    function waitForCustomer() {
+        return new Promise(resolve => {
+            const check = () => {
+                const c = findWaitingCustomer();
+                if (c) resolve(c);
+                else setTimeout(check, 300);
+            };
+            check();
+        });
+    }
+
+    const methods = {
+        async moveToCustomer() {
+            _customer = await waitForCustomer();
+            _slot     = customers.indexOf(_customer);
+            _cocktail = cocktails[_slot];
+            await robot.moveToCustomer(_customer);
+        },
+
+        async takeOrder() {
+            if (!_customer) return;
             await robot.takeOrder();
-            await customer.drawOrder(cocktail, slot);
-            await robot.moveToCocktail(cocktail);
-            await robot.serve(cocktail, customer);
-            Customer._dirtyTables.add(customer.tableId);
-        });
+            await _customer.drawOrder(_cocktail, _slot);
+        },
 
-        await customer.consumeAndLeave(() => {
-            addMoney(5);
-            addCustomerCount();
-        });
+        async moveToCocktail() {
+            if (!_cocktail) return;
+            await robot.moveToCocktail(_cocktail);
+        },
 
-        robot.enqueue(async () => {
+        async serve() {
+            if (!_customer || !_cocktail) return;
+            await robot.serve(_cocktail, _customer);
+            Customer._dirtyTables.add(_customer.tableId);
+        },
+
+        async cleanTable() {
+            if (!_customer) return;
+            const tableId  = _customer.tableId;
+            const cocktail = _cocktail;
+
+            // Wait for customer to finish consuming and leave
+            await _customer.consumeAndLeave(() => {
+                addMoney(5);
+                addCustomerCount();
+            });
+
             await robot.cleanTable(cocktail, tableId);
             Customer.markTableCleaned(tableId);
-        });
 
-        await wait(randBetween(5000, 14000));
+            // Clear context after full cycle
+            _customer = null;
+            _cocktail = null;
+            _slot     = null;
+        },
+
+        async backToInitialPosition() {
+            await robot.backToInitialPosition();
+        },
+
+        async moveTo(tableId) {
+            await robot.moveTo(tableId);
+        },
+    };
+
+    // Build proxy with only enabled methods
+    const proxy = {};
+    for (const name of ENABLED_METHODS) {
+        if (methods[name]) {
+            proxy[name] = (...args) => {
+                _lastAction = robot.enqueue(() => methods[name](...args));
+                return _lastAction;
+            };
+        }
+    }
+
+    // Expose getter so __line can await the last action
+    proxy.__awaitLast = () => _lastAction;
+
+    return proxy;
+}
+
+// ── Editor code execution engine ──────────────────────────────────────
+
+// Inject __line(n) calls before each non-empty, non-comment, non-brace-only line.
+function instrumentCode(code) {
+    return code.split('\n').map((line, i) => {
+        const trimmed = line.trim();
+        // Skip empty lines, comments, and lines that are only braces/keywords
+        if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')
+            || trimmed === '{' || trimmed === '}' || trimmed === '}'
+            || trimmed.startsWith('} else') || trimmed.startsWith('else {')
+            || trimmed.startsWith('while') || trimmed.startsWith('for')
+            || trimmed.startsWith('if') || trimmed.startsWith('else if')) {
+            return line;
+        }
+        // Preserve leading whitespace, prepend __line call
+        const indent = line.match(/^(\s*)/)[1];
+        return `${indent}await __line(${i + 1}); ${line.trimStart()}`;
+    }).join('\n');
+}
+
+let _highlightLine = null;
+let _clearHighlight = null;
+
+async function executeEditorCode() {
+    const code = editor.state.doc.toString();
+    if (!code.trim()) return;
+
+    // Lazy-load highlight functions
+    if (!_highlightLine) {
+        try {
+            const mod = await import('./code-editor.js');
+            _highlightLine  = mod.highlightLine;
+            _clearHighlight = mod.clearHighlight;
+        } catch { /* highlight unavailable — run without it */ }
+    }
+
+    const robotProxy = buildRobotProxy();
+
+    const sandbox = {
+        robot:   robotProxy,
+        wait,
+        console,
+        __line:  async (n) => {
+            // Wait for the previous robot action to complete before highlighting next line
+            await robotProxy.__awaitLast();
+            if (_highlightLine && editor) _highlightLine(editor, n);
+        },
+    };
+
+    const paramNames    = Object.keys(sandbox);
+    const paramValues   = Object.values(sandbox);
+    const instrumented  = instrumentCode(code);
+
+    try {
+        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+        const fn = new AsyncFunction(...paramNames, instrumented);
+        await fn(...paramValues);
+        // Wait for the last enqueued action to finish before clearing
+        await robotProxy.__awaitLast();
+    } catch (err) {
+        console.error('[IDE Error]', err.message);
+    } finally {
+        if (_clearHighlight && editor) _clearHighlight(editor);
     }
 }
 
@@ -135,15 +306,8 @@ btnBar.append(runBtn, stepBtn);
 
 // Mount CodeMirror editor — loaded asynchronously so a CDN failure
 // never prevents the canvas / game loop from starting.
-const initialCode =
-`while (customers) {
-    moveToCustomer();
-    takeOrder();
-    moveToCocktail();
-    serve();
-    backToInitialPosition();
-    cleanTable();
-}`;
+const initialCode = `// escribe tu codigo aqui
+`;
 
 let editor = null;
 
@@ -168,10 +332,23 @@ runBtn.addEventListener('click', () => {
     runBtn.innerHTML = '▶ <span>RUNNING</span>';
     stepBtn.disabled = true;
 
-    runCustomer(customers[0], cocktails[0], 0, randBetween(3000,  7000));
-    runCustomer(customers[1], cocktails[1], 1, randBetween(9000,  15000));
-    runCustomer(customers[2], cocktails[2], 2, randBetween(16000, 24000));
-}, { once: true });
+    // Start autonomous customer spawning
+    startSpawning();
+
+    // Execute whatever the player wrote in the editor
+    executeEditorCode()
+        .then(() => {
+            runBtn.disabled  = false;
+            runBtn.innerHTML = '▶ <span>RUN</span>';
+            stepBtn.disabled = false;
+        })
+        .catch(err => {
+            console.error('[IDE]', err);
+            runBtn.disabled  = false;
+            runBtn.innerHTML = '▶ <span>RUN</span>';
+            stepBtn.disabled = false;
+        });
+});
 
 // STEP — line-by-line execution (wired up in a future task)
 stepBtn.addEventListener('click', () => {
