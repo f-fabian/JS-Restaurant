@@ -20,7 +20,7 @@ export { syntaxHighlighting, defaultHighlightStyle, indentOnInput,
 export { javascript } from '@codemirror/lang-javascript';
 
 // ── Editing ──
-export { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+export { history, defaultKeymap, historyKeymap, indentWithTab, indentMore, indentLess } from '@codemirror/commands';
 export { closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap
        } from '@codemirror/autocomplete';
 

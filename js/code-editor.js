@@ -7,7 +7,7 @@ import {
     EditorView, EditorState, keymap,
     lineNumbers, highlightActiveLineGutter, highlightSpecialChars,
     drawSelection, dropCursor, rectangularSelection, crosshairCursor,
-    highlightActiveLine, history, defaultKeymap, historyKeymap,
+    highlightActiveLine, history, defaultKeymap, historyKeymap, indentMore, indentLess,
     syntaxHighlighting, defaultHighlightStyle, indentOnInput,
     bracketMatching, foldGutter, foldKeymap,
     closeBrackets, autocompletion, closeBracketsKeymap, completionKeymap,
@@ -38,6 +38,20 @@ const setup = [
     highlightActiveLine(),
     highlightSelectionMatches(),
     keymap.of([
+        {
+            key: 'Tab',
+            run(view) {
+                const { state } = view;
+                const hasMultilineSelection = state.selection.ranges.some(r => {
+                    return state.doc.lineAt(r.from).number !== state.doc.lineAt(r.to).number;
+                });
+                if (hasMultilineSelection) return indentMore(view);
+                view.dispatch(state.replaceSelection('\t'),
+                    { scrollIntoView: true, userEvent: 'input' });
+                return true;
+            },
+        },
+        { key: 'Shift-Tab', run: indentLess },
         ...closeBracketsKeymap,
         ...defaultKeymap,
         ...searchKeymap,
