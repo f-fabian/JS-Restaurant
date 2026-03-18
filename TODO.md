@@ -6,11 +6,12 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 
 ## Motor de ejecucion (PRIORITARIO)
 - [x] Editor CodeMirror funcional con Tab
-- [ ] Motor que ejecuta codigo del editor como JS real
-- [ ] Ejecucion secuencial sin await (se encadenan internamente)
-- [ ] Objeto `robot` con metodos habilitables/deshabilitables
-- [ ] Contexto automatico: robot sabe con que customer/cocktail trabaja
-- [ ] Customers spawneando solos con mesas y pedidos aleatorios
+- [x] Motor que ejecuta codigo del editor como JS real
+- [x] Ejecucion secuencial sin await (se encadenan internamente)
+- [x] Objeto `robot` con metodos habilitables/deshabilitables
+- [x] Contexto automatico: robot sabe con que customer/cocktail trabaja
+- [x] Customers spawneando solos con mesas y pedidos aleatorios
+- [x] Highlighting de linea en ejecucion
 - [ ] Manejo de errores basico (catch + mostrar al usuario)
 
 ## Progresion de niveles (DISEÑO PENDIENTE)

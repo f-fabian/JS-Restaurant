@@ -199,6 +199,72 @@ function buildRobotProxy() {
     return proxy;
 }
 
+// ── Error popup ───────────────────────────────────────────────────────
+
+function friendlyError(err) {
+    const msg = err.message || String(err);
+
+    if (err instanceof SyntaxError) {
+        if (msg.includes('Unexpected end of input'))
+            return "Your code is incomplete. Check that every ( has a ) and every { has a }.";
+        if (msg.includes('Unexpected token') || msg.includes('Unexpected identifier'))
+            return "Something is wrong with the structure of your code. Check that all ( ) and { } are properly paired.";
+        return `Your code has a syntax problem: ${msg}`;
+    }
+
+    if (err instanceof ReferenceError) {
+        const name = msg.match(/(\w+) is not defined/)?.[1];
+        if (name)
+            return `"${name}" doesn't exist. Check spelling or make sure it's available.`;
+        return `You're using something that hasn't been defined yet.`;
+    }
+
+    if (err instanceof TypeError) {
+        const fn = msg.match(/(\w+) is not a function/)?.[1];
+        if (fn)
+            return `"${fn}" is not a function. Did you misspell the method name?`;
+        if (msg.includes('Cannot read properties of'))
+            return "You're trying to use something that is empty or doesn't exist yet.";
+        return `Type problem: ${msg}`;
+    }
+
+    return msg;
+}
+
+function showErrorPopup(message) {
+    // Remove existing popup if any
+    const existing = document.getElementById('ide-error-popup');
+    if (existing) existing.remove();
+
+    const popup = document.createElement('div');
+    popup.id = 'ide-error-popup';
+    popup.style.cssText = `
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        background: #1e1e1e; border: 2px solid #e53935; border-radius: 8px;
+        padding: 14px 22px; z-index: 99999; max-width: 520px;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+        font-size: 13px; color: #e0e0e0; box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+        display: flex; align-items: flex-start; gap: 10px;
+    `;
+
+    const text = document.createElement('span');
+    text.innerHTML = `<span style="color:#e53935;font-weight:bold">ERROR</span>: ${message}`;
+
+    const close = document.createElement('button');
+    close.textContent = '\u00D7';
+    close.style.cssText = `
+        background: none; border: none; color: #888; font-size: 20px;
+        cursor: pointer; padding: 0 0 0 8px; line-height: 1; flex-shrink: 0;
+    `;
+    close.onclick = () => popup.remove();
+
+    popup.append(text, close);
+    document.body.appendChild(popup);
+
+    // Auto-dismiss after 8 seconds
+    setTimeout(() => popup.remove(), 8000);
+}
+
 // ── Editor code execution engine ──────────────────────────────────────
 
 // Inject __line(n) calls before each non-empty, non-comment, non-brace-only line.
@@ -259,7 +325,7 @@ async function executeEditorCode() {
         // Wait for the last enqueued action to finish before clearing
         await robotProxy.__awaitLast();
     } catch (err) {
-        console.error('[IDE Error]', err.message);
+        showErrorPopup(friendlyError(err));
     } finally {
         if (_clearHighlight && editor) _clearHighlight(editor);
     }
