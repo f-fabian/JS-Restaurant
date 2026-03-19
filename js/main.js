@@ -13,7 +13,8 @@ const ctx    = canvas.getContext("2d");
 // ── Entities ──────────────────────────────────────────────────────────
 const robot = new Robot();
 
-const customers = [new Customer(), new Customer(), new Customer()];
+// Pool of reusable customer instances (enough to fill the window queue)
+const customers = Array.from({ length: 9 }, () => new Customer());
 const cocktails = [
     new Cocktail("Aperol Spritz", "/assets/aperol.png"),
     new Cocktail("Aperol Spritz", "/assets/aperol.png"),
@@ -66,6 +67,37 @@ function addCustomerCount() {
 const wait        = ms         => new Promise(r => setTimeout(r, ms));
 const randBetween = (min, max) => min + Math.random() * (max - min);
 
+// ── Unlock system ────────────────────────────────────────────────────
+// Tracks which language features and robot methods the player can use.
+const unlocked = {
+    methods: new Set(['serveCoffee']),
+    loops:   false,   // while, for
+    conds:   false,   // if, else
+};
+
+// Validate code against unlocked features. Returns error message or null.
+function validateCode(code) {
+    const lines = code.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const t = lines[i].trim();
+        if (!t || t.startsWith('//') || t.startsWith('/*') || t === '{' || t === '}') continue;
+
+        // Check for locked loops
+        if (!unlocked.loops && /^\s*(while|for)\s*\(/.test(lines[i]))
+            return `Line ${i + 1}: "while" loops are not unlocked yet. Purchase "Marketing" to unlock them.`;
+
+        // Check for locked conditionals
+        if (!unlocked.conds && /^\s*(if|else)\s*[\({]/.test(lines[i]))
+            return `Line ${i + 1}: Conditionals (if/else) are not unlocked yet. They can be purchased in the shop.`;
+
+        // Check for locked robot methods
+        const methodCall = t.match(/^robot\.(\w+)\s*\(/);
+        if (methodCall && !unlocked.methods.has(methodCall[1]))
+            return `Line ${i + 1}: "robot.${methodCall[1]}()" is not unlocked yet. It can be purchased in the shop.`;
+    }
+    return null;
+}
+
 // ── Autonomous customer spawning ──────────────────────────────────────
 // Customers enter on their own. The player's code controls the robot.
 let _spawningActive = false;
@@ -99,29 +131,39 @@ async function spawnCustomerLoop(customer, initialDelay) {
 }
 
 // ── Window mode spawning (level 1) ──
-async function spawnWindowLoop(customer, initialDelay) {
-    await wait(initialDelay);
+// Single sequential loop — spawns one customer at a time from the pool.
+let _marketingUnlocked = false;
 
+async function windowSpawnLoop() {
     while (_spawningActive) {
-        customer.reset();
-        const entered = await customer.enterWindowQueue();
-
-        if (!entered) {
-            // Queue full — wait and retry
-            await wait(randBetween(2000, 5000));
+        // Find a free customer instance from the pool
+        const free = customers.find(c => !c.visible);
+        if (!free || Customer._windowQueue.length >= 9) {
+            await wait(500);
             continue;
         }
 
-        // Wait until this customer leaves before reusing this slot
-        await new Promise(resolve => {
-            const check = () => {
-                if (!customer.visible) resolve();
-                else setTimeout(check, 500);
-            };
-            check();
-        });
+        free.reset();
+        const entered = await free.enterWindowQueue();
+        if (!entered) {
+            await wait(1000);
+            continue;
+        }
 
-        await wait(randBetween(500, 1000));
+        if (!_marketingUnlocked) {
+            // Pre-marketing: wait until this customer leaves, then spawn next
+            await new Promise(resolve => {
+                const check = () => {
+                    if (!free.visible) resolve();
+                    else setTimeout(check, 500);
+                };
+                check();
+            });
+            await wait(randBetween(500, 1000));
+        } else {
+            // Post-marketing: short delay, then spawn next (fills the queue)
+            await wait(randBetween(1500, 3000));
+        }
     }
 }
 
@@ -130,8 +172,7 @@ function startSpawning() {
     _spawningActive = true;
 
     if (_gameMode === 'window') {
-        // Level 1: one customer at a time
-        spawnWindowLoop(customers[0], randBetween(0, 500));
+        windowSpawnLoop();
     } else {
         spawnCustomerLoop(customers[0], randBetween(1000, 3000));
         spawnCustomerLoop(customers[1], randBetween(4000, 8000));
@@ -364,6 +405,13 @@ async function executeEditorCode() {
     const code = editor.state.doc.toString();
     if (!code.trim()) return;
 
+    // Validate against unlocked features
+    const lockError = validateCode(code);
+    if (lockError) {
+        showErrorPopup(lockError);
+        return;
+    }
+
     // Lazy-load highlight functions
     if (!_highlightLine) {
         try {
@@ -444,7 +492,9 @@ btnBar.append(runBtn, stepBtn);
 
 // Mount CodeMirror editor — loaded asynchronously so a CDN failure
 // never prevents the canvas / game loop from starting.
-const initialCode = `// escribe tu codigo aqui
+const initialCode = `// Write your code here. 
+// Use the "RUN" button to execute. 
+// Unlock more features in the shop!
 `;
 
 let editor = null;
@@ -493,3 +543,30 @@ stepBtn.addEventListener('click', () => {
     const code = editor.state.doc.toString();
     console.log('[STEP] code in editor:', code);
 });
+
+// ── Shop test button (temporary — will move into shop UI) ────────────
+const shopBtn = document.createElement('button');
+shopBtn.textContent = 'Marketing — $5';
+shopBtn.style.cssText = `
+    position: fixed; top: 12px; left: 12px; z-index: 99999;
+    background: #1e1e1e; color: #4fc3f7; border: 2px solid #4fc3f7;
+    border-radius: 6px; padding: 8px 16px; cursor: pointer;
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    font-size: 13px; font-weight: bold;
+`;
+shopBtn.addEventListener('click', () => {
+    if (money < 5) {
+        showErrorPopup('Not enough money. You need $5 to buy Marketing.');
+        return;
+    }
+    addMoney(-5);
+    unlocked.loops = true;
+    _marketingUnlocked = true;
+
+    shopBtn.textContent = 'Marketing ✓';
+    shopBtn.disabled = true;
+    shopBtn.style.borderColor = '#555';
+    shopBtn.style.color = '#555';
+    shopBtn.style.cursor = 'default';
+});
+document.body.appendChild(shopBtn);
