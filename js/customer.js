@@ -11,20 +11,22 @@ const SPRITE_ANCHOR_Y = 0.82; // feet are ~82 % down the frame
 
 const SPAWN_X          = 760;
 const SPAWN_Y          = 210;
-const WINDOW_SPAWN_X   = 90;
-const WINDOW_SPAWN_Y   = 400;
-const WINDOW_SERVICE_X = 410;
-const WINDOW_SERVICE_Y = 540;
 const DOOR_X           = 950;
 const DOOR_Y           = 320;
 const ENTRY_WAYPOINT   = 20;   // waypoint where the customer enters the corridor network
 const SPEED            = 3;
+
+// Window queue (level 1) — customers walk from spawn through this path
+const WINDOW_SPAWN_WP  = 29;
+const WINDOW_QUEUE_PATH = [30, 31, 32, 33, 34, 35, 36, 37, 38]; // back → front (serving point)
 
 export class Customer {
     // Shared across all instances — tracks which table IDs are currently occupied.
     static _occupiedTables = new Set();
     // Tables that have been used but not yet cleaned by the robot.
     static _dirtyTables    = new Set();
+    // Window queue — ordered front (index 0 = at serving point 38) to back
+    static _windowQueue    = [];
 
     // Called by main.js after robot.cleanTable() finishes.
     static markTableCleaned(tableId) {
@@ -54,6 +56,7 @@ export class Customer {
         this.served      = false;
         this.visible     = false;   // hidden until the cycle explicitly shows the customer
         this.paymentAnim = null;
+        this.mode        = 'table'; // 'table' (default) or 'window'
     }
 
     // ── Movement helpers ────────────────────────────────────────────
@@ -147,16 +150,92 @@ export class Customer {
         return true;
     }
 
-    // ── Leave sequence ───────────────────────────────────────────────
+    // ── Window queue (level 1) ─────────────────────────────────────
 
-    async consumeAndLeave(onPayment) {
+    // Returns the waypoint coords for a given queue index (0 = front at wp 38)
+    static _windowWaypoint(queueIndex) {
+        const wpId = WINDOW_QUEUE_PATH[WINDOW_QUEUE_PATH.length - 1 - queueIndex];
+        return POSITIONS.WAYPOINTS.find(w => w.id === wpId);
+    }
+
+    // Shift all customers in the window queue forward by one position
+    static advanceWindowQueue() {
+        Customer._windowQueue.forEach((c, i) => {
+            const target = Customer._windowWaypoint(i);
+            c._moveToPoint(target.x, target.y).then(() => {
+                if (i === 0) c.spriteRow = 6; // front of queue faces the window
+            });
+        });
+    }
+
+    // Spawn outside and walk through the queue path to the back of the line.
+    // Returns false if the queue is full.
+    async enterWindowQueue() {
+        if (Customer._windowQueue.length >= WINDOW_QUEUE_PATH.length) return false;
+
+        this.mode    = 'window';
+        this.visible = true;
+
+        // Spawn at window spawn waypoint
+        const spawn = POSITIONS.WAYPOINTS.find(w => w.id === WINDOW_SPAWN_WP);
+        this.x = spawn.x;
+        this.y = spawn.y;
+
+        // My position in the queue (0 = front)
+        const myIndex = Customer._windowQueue.length;
+        Customer._windowQueue.push(this);
+
+        // Walk from spawn through each waypoint up to my assigned spot
+        const targetPathIndex = WINDOW_QUEUE_PATH.length - 1 - myIndex;
+        for (let i = 0; i <= targetPathIndex; i++) {
+            const wp = POSITIONS.WAYPOINTS.find(w => w.id === WINDOW_QUEUE_PATH[i]);
+            await this._moveToPoint(wp.x, wp.y, i === targetPathIndex);
+            if (wp.id === 38) {
+                this.spriteRow = 6; // facing right at the window
+            }
+        }
+
+        this.seated = true; // "in position" — reused for robot detection
+        return true;
+    }
+
+    // ── Leave sequences ──────────────────────────────────────────────
+
+    // Window mode: customer is served, pays, walks to exit, disappears.
+    async leaveWindowQueue(onPayment, price = 1) {
+        // Remove from front of queue
+        Customer._windowQueue.shift();
+
+        // Pay — floating dollar animation
+        this.served = true;
+        onPayment(price);
+        const spriteTop = (this.y + this.size) - this.sprite.frameH * SPRITE_SCALE * SPRITE_ANCHOR_Y;
+        this.paymentAnim = { y: spriteTop - 10, alpha: 1.0, amount: price };
+
+        // Walk to exit waypoints
+        const wp39 = POSITIONS.WAYPOINTS.find(w => w.id === 39);
+        const wp40 = POSITIONS.WAYPOINTS.find(w => w.id === 40);
+        await this._moveToPoint(wp39.x, wp39.y, false);
+        await this._moveToPoint(wp40.x, wp40.y);
+
+        this.visible     = false;
+        this.seated      = false;
+        this.served      = false;
+        this.paymentAnim = null;
+
+        // Advance remaining customers in the queue
+        Customer.advanceWindowQueue();
+    }
+
+    // Table mode: customer consumes, pays, walks out through corridors.
+    async consumeAndLeave(onPayment, price = 5) {
         // 1. Consume for 4 seconds
         await new Promise(r => setTimeout(r, 4000));
 
         // 2. Pay — trigger floating dollar animation (start above the sprite head)
-        onPayment(5);
+        onPayment(price);
         const spriteTop = (this.y + this.size) - this.sprite.frameH * SPRITE_SCALE * SPRITE_ANCHOR_Y;
-        this.paymentAnim = { y: spriteTop - 10, alpha: 1.0 };
+        this.paymentAnim = { y: spriteTop - 10, alpha: 1.0, amount: price };
 
         // 3. Navigate through corridors back to entry waypoint
         await this._followPath(findPath(this.x, this.y, ENTRY_WAYPOINT));
@@ -263,8 +342,9 @@ export class Customer {
             ctx.fillStyle   = "#ffd700";
             ctx.strokeStyle = "#000";
             ctx.lineWidth   = 3;
-            ctx.strokeText("$5", feetX - 10, a.y);
-            ctx.fillText("$5",   feetX - 10, a.y);
+            const label = `$${a.amount || 5}`;
+            ctx.strokeText(label, feetX - 10, a.y);
+            ctx.fillText(label,   feetX - 10, a.y);
             ctx.restore();
 
             a.y     -= 1.5;

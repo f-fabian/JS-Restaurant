@@ -1,8 +1,9 @@
 // cocktail.js
 
 export class Cocktail {
-    constructor(name, imageSrc) {
+    constructor(name, imageSrc, price = 5) {
         this.name      = name;
+        this.price     = price;
         this.image     = new Image();
         this.image.src = imageSrc;
 

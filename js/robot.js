@@ -35,6 +35,9 @@ export class Robot {
         // Optional callback: () => boolean. Return true when there is no pending
         // external work (e.g. dirty tables). Robot only returns home when true.
         this._idleCheck  = null;
+
+        // Progress ring animation (used by serveCoffee)
+        this._progress     = null; // { progress: 0..1 } or null
     }
 
     // Set a predicate that must return true before the robot is allowed to go home.
@@ -164,6 +167,27 @@ export class Robot {
         customer.served = true;
     }
 
+    // Prepare and serve coffee at the window. Shows a progress ring for `duration` ms.
+    serveCoffee(duration = 3000) {
+        return new Promise(resolve => {
+            this._progress = { value: 0 };
+            const start = performance.now();
+
+            const tick = () => {
+                const elapsed = performance.now() - start;
+                this._progress.value = Math.min(elapsed / duration, 1);
+
+                if (elapsed >= duration) {
+                    this._progress = null;
+                    resolve();
+                    return;
+                }
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        });
+    }
+
     // tableId is passed explicitly so concurrent serves don't overwrite each other
     async cleanTable(cocktail, tableId) {
         const serviceNodeId = POSITIONS.TABLE_SERVICE[tableId];
@@ -176,19 +200,50 @@ export class Robot {
     }
 
     draw(ctx) {
+        const feetX = this.x + this.size / 2;
+        const feetY = this.y + this.size;
+
         if (this.sprite.loaded) {
             const fw    = this.sprite.frameW * SPRITE_SCALE;
             const fh    = this.sprite.frameH * SPRITE_SCALE;
-            // Anchor the sprite so the character's feet stay at the logical position
-            // regardless of scale. Tune SPRITE_ANCHOR_X / _Y at the top of this file.
-            const feetX = this.x + this.size / 2;
-            const feetY = this.y + this.size;
             const drawX = feetX - fw * SPRITE_ANCHOR_X;
             const drawY = feetY - fh * SPRITE_ANCHOR_Y;
             this.sprite.draw(ctx, this.spriteFrame, this.spriteRow, drawX, drawY, SPRITE_SCALE);
         } else {
             ctx.fillStyle = "cyan";
             ctx.fillRect(this.x, this.y, this.size, this.size);
+        }
+
+        // Progress ring (shown during serveCoffee)
+        if (this._progress) {
+            const cx     = feetX;
+            const cy     = feetY - this.size * 2.2;
+            const radius = 14;
+            const angle  = this._progress.value * Math.PI * 2;
+
+            // Background circle
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fill();
+
+            // Progress arc
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius - 2, -Math.PI / 2, -Math.PI / 2 + angle);
+            ctx.closePath();
+            ctx.fillStyle = '#4fc3f7';
+            ctx.fill();
+
+            // Percentage text
+            const pct = Math.floor(this._progress.value * 100);
+            ctx.font      = 'bold 9px monospace';
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${pct}%`, cx, cy);
+            ctx.textAlign    = 'start';
+            ctx.textBaseline = 'alphabetic';
         }
     }
 }

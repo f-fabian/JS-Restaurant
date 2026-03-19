@@ -19,6 +19,7 @@ const cocktails = [
     new Cocktail("Aperol Spritz", "/assets/aperol.png"),
     new Cocktail("Aperol Spritz", "/assets/aperol.png"),
 ];
+const coffee = new Cocktail("Coffee", "/assets/aperol.png", 1); // TODO: replace with coffee sprite
 
 // ── Debug dummies (set DEBUG_DUMMIES = false to disable) ─────────────
 const DEBUG_DUMMIES = false;
@@ -66,9 +67,11 @@ const wait        = ms         => new Promise(r => setTimeout(r, ms));
 const randBetween = (min, max) => min + Math.random() * (max - min);
 
 // ── Autonomous customer spawning ──────────────────────────────────────
-// Customers enter and sit on their own. The player's code controls the robot.
+// Customers enter on their own. The player's code controls the robot.
 let _spawningActive = false;
+let _gameMode = 'window'; // 'window' (level 1) or 'table' (later levels)
 
+// ── Table mode spawning (used in later levels) ──
 async function spawnCustomerLoop(customer, initialDelay) {
     await wait(initialDelay);
 
@@ -83,13 +86,11 @@ async function spawnCustomerLoop(customer, initialDelay) {
             continue;
         }
 
-        // Wait until this customer leaves before spawning the next one in this slot
         await new Promise(resolve => {
             const check = () => {
                 if (!customer.seated && !customer.visible) resolve();
                 else setTimeout(check, 500);
             };
-            // Customer hasn't been served yet — wait
             check();
         });
 
@@ -97,12 +98,45 @@ async function spawnCustomerLoop(customer, initialDelay) {
     }
 }
 
+// ── Window mode spawning (level 1) ──
+async function spawnWindowLoop(customer, initialDelay) {
+    await wait(initialDelay);
+
+    while (_spawningActive) {
+        customer.reset();
+        const entered = await customer.enterWindowQueue();
+
+        if (!entered) {
+            // Queue full — wait and retry
+            await wait(randBetween(2000, 5000));
+            continue;
+        }
+
+        // Wait until this customer leaves before reusing this slot
+        await new Promise(resolve => {
+            const check = () => {
+                if (!customer.visible) resolve();
+                else setTimeout(check, 500);
+            };
+            check();
+        });
+
+        await wait(randBetween(500, 1000));
+    }
+}
+
 function startSpawning() {
     if (_spawningActive) return;
     _spawningActive = true;
-    spawnCustomerLoop(customers[0], randBetween(1000, 3000));
-    spawnCustomerLoop(customers[1], randBetween(4000, 8000));
-    spawnCustomerLoop(customers[2], randBetween(8000, 14000));
+
+    if (_gameMode === 'window') {
+        // Level 1: one customer at a time
+        spawnWindowLoop(customers[0], randBetween(0, 500));
+    } else {
+        spawnCustomerLoop(customers[0], randBetween(1000, 3000));
+        spawnCustomerLoop(customers[1], randBetween(4000, 8000));
+        spawnCustomerLoop(customers[2], randBetween(8000, 14000));
+    }
 }
 
 // ── Robot proxy (sandbox for player code) ─────────────────────────────
@@ -113,6 +147,7 @@ function startSpawning() {
 const ENABLED_METHODS = [
     'moveToCustomer', 'takeOrder', 'moveToCocktail',
     'serve', 'cleanTable', 'backToInitialPosition', 'moveTo',
+    'serveCoffee',
 ];
 
 function buildRobotProxy() {
@@ -184,6 +219,30 @@ function buildRobotProxy() {
             _customer = null;
             _cocktail = null;
             _slot     = null;
+        },
+
+        async serveCoffee() {
+            // Wait for a customer at the front of the window queue
+            const frontCustomer = await new Promise(resolve => {
+                const check = () => {
+                    const queue = Customer._windowQueue;
+                    if (queue.length > 0 && queue[0].seated && !queue[0].served) {
+                        resolve(queue[0]);
+                    } else {
+                        setTimeout(check, 300);
+                    }
+                };
+                check();
+            });
+
+            // Prepare coffee (shows progress ring)
+            await robot.serveCoffee(3000);
+
+            // Customer leaves and queue advances
+            await frontCustomer.leaveWindowQueue(() => {
+                addMoney(coffee.price);
+                addCustomerCount();
+            }, coffee.price);
         },
 
         async backToInitialPosition() {
