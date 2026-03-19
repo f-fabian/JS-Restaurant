@@ -25,8 +25,6 @@ export class Customer {
     static _occupiedTables = new Set();
     // Tables that have been used but not yet cleaned by the robot.
     static _dirtyTables    = new Set();
-    // Positions in outside queue
-    static _outsideQueue = new Set();
 
     // Called by main.js after robot.cleanTable() finishes.
     static markTableCleaned(tableId) {
