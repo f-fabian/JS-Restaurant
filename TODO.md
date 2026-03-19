@@ -12,7 +12,7 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 - [x] Contexto automatico: robot sabe con que customer/cocktail trabaja
 - [x] Customers spawneando solos con mesas y pedidos aleatorios
 - [x] Highlighting de linea en ejecucion
-- [ ] Manejo de errores basico (catch + mostrar al usuario)
+- [x] Manejo de errores basico (catch + mostrar al usuario)
 
 ## Progresion de niveles (DISEÑO PENDIENTE)
 - [ ] Nivel 1: acciones basicas (1-2 funciones). Se ejecuta UNA vez por RUN
