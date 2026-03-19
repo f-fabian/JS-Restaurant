@@ -11,6 +11,10 @@ const SPRITE_ANCHOR_Y = 0.82; // feet are ~82 % down the frame
 
 const SPAWN_X          = 760;
 const SPAWN_Y          = 210;
+const WINDOW_SPAWN_X   = 90;
+const WINDOW_SPAWN_Y   = 400;
+const WINDOW_SERVICE_X = 410;
+const WINDOW_SERVICE_Y = 540;
 const DOOR_X           = 950;
 const DOOR_Y           = 320;
 const ENTRY_WAYPOINT   = 20;   // waypoint where the customer enters the corridor network
@@ -21,11 +25,14 @@ export class Customer {
     static _occupiedTables = new Set();
     // Tables that have been used but not yet cleaned by the robot.
     static _dirtyTables    = new Set();
+    // Positions in outside queue
+    static _outsideQueue = new Set();
 
     // Called by main.js after robot.cleanTable() finishes.
     static markTableCleaned(tableId) {
         Customer._dirtyTables.delete(tableId);
     }
+    
     constructor() {
         this.size  = 40;
         this.order = "Aperol Spritz";

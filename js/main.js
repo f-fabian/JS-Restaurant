@@ -20,7 +20,20 @@ const cocktails = [
     new Cocktail("Aperol Spritz", "/assets/aperol.png"),
 ];
 
-const game = new Game(canvas, [robot], customers, cocktails, ctx);
+// ── Debug dummies (set DEBUG_DUMMIES = false to disable) ─────────────
+const DEBUG_DUMMIES = false;
+const dummy1 = new Robot();
+const dummy2 = new Robot();
+dummy1.x = 200; dummy1.y = 450;
+dummy2.x = 250; dummy2.y = 480;
+// Disable their queue so they just stand still
+dummy1._busy = true;
+dummy2._busy = true;
+window.d1 = dummy1; // move from console: d1.x = 300; d1.y = 400;
+window.d2 = dummy2; // move from console: d2.x = 350; d2.y = 430;
+
+const allRobots = DEBUG_DUMMIES ? [robot, dummy1, dummy2] : [robot];
+const game = new Game(canvas, allRobots, customers, cocktails, ctx);
 
 robot.setIdleCheck(() => Customer._dirtyTables.size === 0);
 

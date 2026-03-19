@@ -89,6 +89,24 @@ export const POSITIONS = {
         {id: 25, x: 390, y: 300},   // bar pickup left
         {id: 26, x: 440, y: 275},   // bar pickup center
         {id: 27, x: 490, y: 250},   // bar pickup right
+
+        // window level 1
+        {id: 28, x: 430, y: 470},
+
+        // down path to window for customer level 1 (not used for pathfinding)
+
+        {id: 29, x: 90, y: 400}, // spawn point for customer (window level 1, outside the restaurant)
+        {id: 30, x: 120, y: 380}, // Position in queue
+        {id: 31, x: 150, y: 400}, // Position in queue
+        {id: 32, x: 180, y: 420}, // Position in queue
+        {id: 33, x: 215, y: 440}, // Position in queue
+        {id: 34, x: 250, y: 460}, // Position in queue
+        {id: 35, x: 290, y: 480}, // Position in queue
+        {id: 36, x: 330, y: 500}, // Position in queue
+        {id: 37, x: 370, y: 520}, // Position in queue
+        {id: 38, x: 410, y: 540}, // window Serving point
+        {id: 39, x: 490, y: 590}, // start of path to leave
+        {id: 40, x: 650, y: 680}  // end of path to leave
     ],
     
     // Edges that connect the waypoints above (bidirectional)
@@ -100,6 +118,10 @@ export const POSITIONS = {
         [3, 10], [10, 11], [11, 12], [12, 13],          // LC2 ↓
         [4, 14], [14, 15], [15, 16], [16, 17],          // RC3 ↓
         [5, 18], [18, 19], [19, 20], [20, 21],          // RC4 ↓
+
+        [29, 30], [30, 31], [31, 32], [32, 33],         // outside queue →
+        [33, 34], [34, 35], [35, 36], [36, 37],         // queue →
+        [37, 38], [38, 39], [39, 40]                    // window serving point → exit
     ],
 
     // Which waypoint id the robot stands at to serve each table
@@ -134,7 +156,9 @@ export class Game {
         this.ctx = ctx;
 
         this.background = new Image();
-        this.background.src = "/assets/background.png";
+        this.background.src = "/assets/background-2.png";
+        this.foreground = new Image();
+        this.foreground.src = "/assets/background-1.png";
 
         const container = this.canvas.parentElement;
         this.canvas.width = container.clientWidth;
@@ -156,9 +180,11 @@ export class Game {
 
         this.ctx.drawImage(this.background, 0, 0, BASE_WIDTH, BASE_HEIGHT);
 
-        this.customers.forEach(c => c.draw(this.ctx));
         this.robots.forEach(r => r.draw(this.ctx));
         this.cocktails.forEach(c => c.draw(this.ctx));
+        
+        this.ctx.drawImage(this.foreground, 0, 0, BASE_WIDTH, BASE_HEIGHT);
+        this.customers.forEach(c => c.draw(this.ctx));
 
         this.ctx.restore();
     }

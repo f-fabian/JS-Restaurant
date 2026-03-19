@@ -11,7 +11,7 @@ const WALK_TICK_INTERVAL  = 5;   // advance one frame every N RAF ticks (~83 ms 
 const SPRITE_ANCHOR_X = 0.5;  // feet are horizontally centred in the frame
 const SPRITE_ANCHOR_Y = 0.82; // feet are ~82 % down the frame
 
-const INITIAL_WAYPOINT_ID = 2;
+const INITIAL_WAYPOINT_ID = 28;
 
 export class Robot {
 
@@ -25,7 +25,7 @@ export class Robot {
         // Sprite
         this.sprite      = new Sprite('/assets/character_Sheet.png');
         this.spriteFrame = 3;   // current animation frame (0 = idle/stand)
-        this.spriteRow   = 0;   // direction row (0,2,4,6)
+        this.spriteRow   = 2;   // direction row (0,2,4,6)
         this._walkTick   = 0;   // RAF-tick counter for frame pacing
 
         // FIFO task queue
