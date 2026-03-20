@@ -56,11 +56,14 @@ function addMoney(amount) {
     moneyDisplay.textContent = `$ ${money}`;
 }
 
-let servedCount = 0;
+let servedCount = 6;
 const customerDisplay = document.getElementById("customerDisplay");
 function addCustomerCount() {
     servedCount++;
     customerDisplay.textContent = `👤 ${servedCount}`;
+    if (servedCount === 7 && buildFirmwarePanel.reveal) {
+        showHintPopup();
+    }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────
@@ -378,6 +381,56 @@ function showErrorPopup(message) {
     setTimeout(() => popup.remove(), 8000);
 }
 
+function showHintPopup() {
+    const fadeSpeed = '2s';
+
+    // Hint popup
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+        position: fixed; top: 100px; left: 12px; z-index: 100001;
+        background: #1a1a2e; border: 2px solid #ffb74d; border-radius: 8px;
+        padding: 18px 26px; max-width: 360px;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+        font-size: 15px; line-height: 1.5; color: #e0e0e0;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+        opacity: 0; transition: opacity ${fadeSpeed} ease;
+    `;
+    popup.innerHTML = `
+        <span style="color:#ffb74d;font-weight:bold">HINT</span>:
+        Serving customers one by one is slow... There must be a better way.
+        <span style="color:#4fc3f7">Check for available updates.</span>
+    `;
+    document.body.appendChild(popup);
+
+    // Arrow pointing up toward the Updates button
+    const arrow = document.createElement('div');
+    arrow.style.cssText = `
+        position: fixed; top: 52px; left: 34px; z-index: 100001;
+        font-size: 36px; color: #ffb74d;
+        opacity: 0; transition: opacity ${fadeSpeed} ease;
+    `;
+    arrow.textContent = '\u25B2'; // ▲
+    document.body.appendChild(arrow);
+
+    // Sequence: hint → arrow → updates button
+    requestAnimationFrame(() => { popup.style.opacity = '1'; });
+
+    setTimeout(() => {
+        arrow.style.opacity = '1';
+    }, 3000);
+
+    setTimeout(() => {
+        if (buildFirmwarePanel.reveal) buildFirmwarePanel.reveal();
+    }, 5000);
+
+    // Auto-dismiss hint + arrow after 12s
+    setTimeout(() => {
+        popup.style.opacity = '0';
+        arrow.style.opacity = '0';
+        setTimeout(() => { popup.remove(); arrow.remove(); }, 2000);
+    }, 12000);
+}
+
 // ── Editor code execution engine ──────────────────────────────────────
 
 // Inject __line(n) calls before each non-empty, non-comment, non-brace-only line.
@@ -544,29 +597,156 @@ stepBtn.addEventListener('click', () => {
     console.log('[STEP] code in editor:', code);
 });
 
-// ── Shop test button (temporary — will move into shop UI) ────────────
-const shopBtn = document.createElement('button');
-shopBtn.textContent = 'Marketing — $5';
-shopBtn.style.cssText = `
-    position: fixed; top: 12px; left: 12px; z-index: 99999;
-    background: #1e1e1e; color: #4fc3f7; border: 2px solid #4fc3f7;
-    border-radius: 6px; padding: 8px 16px; cursor: pointer;
-    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
-    font-size: 13px; font-weight: bold;
-`;
-shopBtn.addEventListener('click', () => {
-    if (money < 5) {
-        showErrorPopup('Not enough money. You need $5 to buy Marketing.');
-        return;
-    }
-    addMoney(-5);
-    unlocked.loops = true;
-    _marketingUnlocked = true;
+// ── Firmware Updates (shop) ───────────────────────────────────────────
 
-    shopBtn.textContent = 'Marketing ✓';
-    shopBtn.disabled = true;
-    shopBtn.style.borderColor = '#555';
-    shopBtn.style.color = '#555';
-    shopBtn.style.cursor = 'default';
-});
-document.body.appendChild(shopBtn);
+const firmwareUpgrades = [
+    {
+        id: 'marketing',
+        name: 'Marketing Module',
+        version: 'v1.1',
+        desc: 'Attract more customers to your window.',
+        cost: 5,
+        purchased: false,
+        onBuy() {
+            unlocked.loops = true;
+            _marketingUnlocked = true;
+        },
+    },
+    {
+        id: 'conditionals',
+        name: 'Decision Engine',
+        version: 'v1.2',
+        desc: 'Unlock if / else conditionals.',
+        cost: 15,
+        purchased: false,
+        requires: 'marketing',
+        onBuy() {
+            unlocked.conds = true;
+        },
+    },
+];
+
+function buildFirmwarePanel() {
+    const font = '"Cascadia Code", "Fira Code", Consolas, monospace';
+
+    // Toggle button
+    const toggleBtn = document.createElement('button');
+    toggleBtn.textContent = 'Updates';
+    toggleBtn.style.cssText = `
+        position: fixed; top: 12px; left: 12px; z-index: 100000;
+        background: #1e1e1e; color: #4fc3f7; border: 2px solid #4fc3f7;
+        border-radius: 8px; padding: 12px 24px; cursor: pointer;
+        font-family: ${font}; font-size: 16px; font-weight: bold;
+        letter-spacing: 1px; text-transform: uppercase;
+        opacity: 0; pointer-events: none;
+        transition: opacity 2s ease;
+    `;
+    document.body.appendChild(toggleBtn);
+
+    // Expose reveal so addCustomerCount can trigger it
+    buildFirmwarePanel.reveal = () => {
+        toggleBtn.style.opacity = '1';
+        toggleBtn.style.pointerEvents = 'auto';
+    };
+
+    // Panel
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+        position: fixed; top: 52px; left: 12px; z-index: 99999;
+        background: #1a1a2e; border: 2px solid #4fc3f7; border-radius: 8px;
+        padding: 16px; width: 280px; display: none;
+        font-family: ${font}; font-size: 12px; color: #e0e0e0;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+    `;
+
+    // Header
+    const header = document.createElement('div');
+    header.innerHTML = '<span style="color:#4fc3f7;font-weight:bold;font-size:14px">FIRMWARE UPDATES</span>';
+    header.style.cssText = 'margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333;';
+    panel.appendChild(header);
+
+    // Items container
+    const list = document.createElement('div');
+    list.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+    panel.appendChild(list);
+
+    function renderItems() {
+        list.innerHTML = '';
+        for (const up of firmwareUpgrades) {
+            const reqMet = !up.requires || firmwareUpgrades.find(u => u.id === up.requires)?.purchased;
+
+            const item = document.createElement('div');
+            item.style.cssText = `
+                background: #16213e; border: 1px solid ${up.purchased ? '#555' : reqMet ? '#4fc3f7' : '#333'};
+                border-radius: 6px; padding: 10px;
+                opacity: ${!reqMet && !up.purchased ? '0.5' : '1'};
+            `;
+
+            const top = document.createElement('div');
+            top.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;';
+            top.innerHTML = `
+                <span style="color:${up.purchased ? '#555' : '#4fc3f7'}; font-weight:bold; font-size:12px">
+                    ${up.name} <span style="color:#888; font-weight:normal">${up.version}</span>
+                </span>
+            `;
+
+            const desc = document.createElement('div');
+            desc.style.cssText = 'color: #999; font-size: 11px; margin-bottom: 8px;';
+            desc.textContent = up.desc;
+
+            item.appendChild(top);
+            item.appendChild(desc);
+
+            if (up.purchased) {
+                const badge = document.createElement('div');
+                badge.style.cssText = 'color: #66bb6a; font-size: 11px; font-weight: bold;';
+                badge.textContent = 'INSTALLED';
+                item.appendChild(badge);
+            } else if (!reqMet) {
+                const lock = document.createElement('div');
+                const reqName = firmwareUpgrades.find(u => u.id === up.requires)?.name || up.requires;
+                lock.style.cssText = 'color: #888; font-size: 11px;';
+                lock.textContent = `Requires: ${reqName}`;
+                item.appendChild(lock);
+            } else {
+                const btn = document.createElement('button');
+                btn.textContent = `Install — $${up.cost}`;
+                btn.style.cssText = `
+                    background: transparent; color: #4fc3f7; border: 1px solid #4fc3f7;
+                    border-radius: 4px; padding: 4px 10px; cursor: pointer;
+                    font-family: ${font}; font-size: 11px; font-weight: bold;
+                    width: 100%;
+                `;
+                btn.addEventListener('mouseenter', () => { btn.style.background = '#4fc3f722'; });
+                btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
+                btn.addEventListener('click', () => {
+                    if (money < up.cost) {
+                        showErrorPopup(`Not enough money. You need $${up.cost} to install ${up.name}.`);
+                        return;
+                    }
+                    addMoney(-up.cost);
+                    up.purchased = true;
+                    up.onBuy();
+                    renderItems();
+                });
+                item.appendChild(btn);
+            }
+
+            list.appendChild(item);
+        }
+    }
+
+    renderItems();
+    document.body.appendChild(panel);
+
+    // Toggle
+    toggleBtn.addEventListener('click', () => {
+        const open = panel.style.display === 'none';
+        panel.style.display = open ? 'block' : 'none';
+        toggleBtn.style.borderColor = open ? '#66bb6a' : '#4fc3f7';
+        toggleBtn.style.color = open ? '#66bb6a' : '#4fc3f7';
+        if (open) renderItems(); // refresh state
+    });
+}
+
+buildFirmwarePanel();
