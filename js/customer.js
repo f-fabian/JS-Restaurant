@@ -62,8 +62,15 @@ export class Customer {
     // ── Movement helpers ────────────────────────────────────────────
 
     _moveToPoint(targetX, targetY, stop = true) {
+        // Cancel any in-progress move on this customer
+        this._moveId = (this._moveId || 0) + 1;
+        const myId = this._moveId;
+
         return new Promise(resolve => {
             const animate = () => {
+                // Another _moveToPoint was called — abort this one
+                if (this._moveId !== myId) { resolve(); return; }
+
                 const dx   = targetX - this.x;
                 const dy   = targetY - this.y;
                 const dist = Math.hypot(dx, dy);
@@ -161,6 +168,7 @@ export class Customer {
     // Shift all customers in the window queue forward by one position
     static advanceWindowQueue() {
         Customer._windowQueue.forEach((c, i) => {
+            c._advancing = true; // signal enterWindowQueue to stop its walk loop
             const target = Customer._windowWaypoint(i);
             c._moveToPoint(target.x, target.y).then(() => {
                 if (i === 0) c.spriteRow = 6; // front of queue faces the window
@@ -175,6 +183,7 @@ export class Customer {
 
         this.mode    = 'window';
         this.visible = true;
+        this._advancing = false; // not yet interrupted by advanceWindowQueue
 
         // Spawn at window spawn waypoint
         const spawn = POSITIONS.WAYPOINTS.find(w => w.id === WINDOW_SPAWN_WP);
@@ -182,12 +191,15 @@ export class Customer {
         this.y = spawn.y;
 
         // My position in the queue (0 = front)
-        const myIndex = Customer._windowQueue.length;
         Customer._windowQueue.push(this);
 
         // Walk from spawn through each waypoint up to my assigned spot
+        const myIndex = Customer._windowQueue.indexOf(this);
         const targetPathIndex = WINDOW_QUEUE_PATH.length - 1 - myIndex;
         for (let i = 0; i <= targetPathIndex; i++) {
+            // advanceWindowQueue took over movement — stop walking the original path
+            if (this._advancing) break;
+
             const wp = POSITIONS.WAYPOINTS.find(w => w.id === WINDOW_QUEUE_PATH[i]);
             await this._moveToPoint(wp.x, wp.y, i === targetPathIndex);
             if (wp.id === 38) {

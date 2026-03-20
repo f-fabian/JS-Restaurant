@@ -49,7 +49,7 @@ function loop() {
 loop();
 
 // ── HUD counters ──────────────────────────────────────────────────────
-let money = 0;
+let money = 5;
 const moneyDisplay = document.getElementById("moneyDisplay");
 function addMoney(amount) {
     money += amount;
