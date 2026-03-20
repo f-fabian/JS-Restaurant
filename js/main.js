@@ -49,7 +49,7 @@ function loop() {
 loop();
 
 // ── HUD counters ──────────────────────────────────────────────────────
-let money = 5;
+let money = 0;
 const moneyDisplay = document.getElementById("moneyDisplay");
 function addMoney(amount) {
     money += amount;
@@ -421,14 +421,14 @@ function showHintPopup() {
 
     setTimeout(() => {
         if (buildFirmwarePanel.reveal) buildFirmwarePanel.reveal();
-    }, 5000);
+    }, 4000);
 
     // Auto-dismiss hint + arrow after 12s
     setTimeout(() => {
         popup.style.opacity = '0';
         arrow.style.opacity = '0';
         setTimeout(() => { popup.remove(); arrow.remove(); }, 2000);
-    }, 12000);
+    }, 7000);
 }
 
 // ── Editor code execution engine ──────────────────────────────────────
