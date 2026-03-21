@@ -35,7 +35,7 @@ export class Customer {
     
     constructor() {
         this.size  = 40;
-        this.order = "Aperol Spritz";
+        this.order = "1 Coffee please";
 
         // Sprite
         this.sprite      = new Sprite('/assets/character_clothed.png');
@@ -171,7 +171,11 @@ export class Customer {
             c._advancing = true; // signal enterWindowQueue to stop its walk loop
             const target = Customer._windowWaypoint(i);
             c._moveToPoint(target.x, target.y).then(() => {
-                if (i === 0) c.spriteRow = 6; // front of queue faces the window
+                if (i === 0) {
+                    c.spriteRow = 6; // front of queue faces the window
+                    c.showOrder = true;
+                    setTimeout(() => { c.showOrder = false; }, 1000);
+                }
             });
         });
     }
@@ -204,6 +208,8 @@ export class Customer {
             await this._moveToPoint(wp.x, wp.y, i === targetPathIndex);
             if (wp.id === 38) {
                 this.spriteRow = 6; // facing right at the window
+                this.showOrder = true;
+                setTimeout(() => { this.showOrder = false; }, 1000);
             }
         }
 
@@ -218,7 +224,8 @@ export class Customer {
         // Remove from front of queue
         Customer._windowQueue.shift();
 
-        // Pay — floating dollar animation
+        // Hide speech bubble and mark served
+        this.showOrder = false;
         this.served = true;
         onPayment(price);
         const spriteTop = (this.y + this.size) - this.sprite.frameH * SPRITE_SCALE * SPRITE_ANCHOR_Y;

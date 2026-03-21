@@ -49,7 +49,7 @@ function loop() {
 loop();
 
 // ── HUD counters ──────────────────────────────────────────────────────
-let money = 0;
+let money = 5;
 const moneyDisplay = document.getElementById("moneyDisplay");
 function addMoney(amount) {
     money += amount;
@@ -278,6 +278,9 @@ function buildRobotProxy() {
                 };
                 check();
             });
+
+            // Small delay before robot starts preparing
+            await new Promise(r => setTimeout(r, 1000));
 
             // Prepare coffee (shows progress ring)
             await robot.serveCoffee(3000);
