@@ -53,10 +53,11 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 BUGS
 
 original:
-en la primera vuelta viene 1 cliente al cliquear en run
+- en la primera vuelta viene 1 cliente al cliquear en run
+- boton run se bloquea
 
 update while:
-al comprar while no comienzan a venir automaticamente
+- al comprar while no comienzan a venir automaticamente
 
 update if/else:
-condicional no se lee primero
+- condicional no se lee primero
