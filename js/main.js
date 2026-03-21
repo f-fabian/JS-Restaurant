@@ -48,6 +48,15 @@ function loop() {
 }
 loop();
 
+// ── Spawn first customer automatically after 0.5s ──
+setTimeout(async () => {
+    const first = customers.find(c => !c.visible);
+    if (first) {
+        first.reset();
+        await first.enterWindowQueue();
+    }
+}, 1500);
+
 // ── HUD counters ──────────────────────────────────────────────────────
 let money = 5;
 const moneyDisplay = document.getElementById("moneyDisplay");
