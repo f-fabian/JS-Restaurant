@@ -15,6 +15,8 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 - [x] Manejo de errores basico (catch + mostrar al usuario)
 
 ## Progresion de niveles (DISEÑO PENDIENTE)
+- [ ] clientes viniendo desde el comienzo y no cuando tocamos en run.
+- [ ] el juego se pausa si cambiamos de ventana.
 - [ ] Nivel 1: acciones basicas (1-2 funciones). Se ejecuta UNA vez por RUN
 - [ ] Nivel 2: mas funciones, secuencias mas largas
 - [ ] Nivel 3: desbloquear `while` — automatizacion
@@ -46,3 +48,15 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 - [ ] Sistema de niveles/progresion
 - [ ] Guardado de progreso (localStorage?)
 - [ ] Restriccion de funciones por nivel (config escalable)
+
+
+BUGS
+
+original:
+en la primera vuelta viene 1 cliente al cliquear en run
+
+update while:
+al comprar while no comienzan a venir automaticamente
+
+update if/else:
+condicional no se lee primero

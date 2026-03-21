@@ -27,7 +27,8 @@ html, body {
 
 /* ── HUD overlays ─────────────────────────────────────────────── */
 #moneyDisplay,
-#customerDisplay {
+#customerDisplay,
+#beansDisplay {
     position: fixed;
     top: 14px;
     background: rgba(0, 0, 0, 0.6);
@@ -50,6 +51,12 @@ html, body {
     right: 130px;
     color: #7ecfcf;
     border: 1px solid #7ecfcf;
+}
+
+#beansDisplay {
+    right: 240px;
+    color: #c89b6e;
+    border: 1px solid #c89b6e;
 }
 
 /* ── Floating windows ─────────────────────────────────────────── */

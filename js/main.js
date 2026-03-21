@@ -58,15 +58,20 @@ setTimeout(async () => {
 }, 1500);
 
 // ── HUD counters ──────────────────────────────────────────────────────
-let money = 5;
+let money = 0;
 const moneyDisplay = document.getElementById("moneyDisplay");
 function addMoney(amount) {
     money += amount;
     moneyDisplay.textContent = `$ ${money}`;
 }
 
-let servedCount = 6;
+let servedCount = 0;
 const customerDisplay = document.getElementById("customerDisplay");
+const beansDisplay    = document.getElementById("beansDisplay");
+
+function updateBeansDisplay() {
+    beansDisplay.textContent = `☕ ${robot.beans}`;
+}
 function addCustomerCount() {
     servedCount++;
     customerDisplay.textContent = `👤 ${servedCount}`;
@@ -82,9 +87,10 @@ const randBetween = (min, max) => min + Math.random() * (max - min);
 // ── Unlock system ────────────────────────────────────────────────────
 // Tracks which language features and robot methods the player can use.
 const unlocked = {
-    methods: new Set(['serveCoffee']),
-    loops:   false,   // while, for
-    conds:   false,   // if, else
+    methods:  new Set(['serveCoffee']),
+    sensors:  new Set(),              // machineReady, etc.
+    loops:    false,   // while, for
+    conds:    false,   // if, else
 };
 
 // Validate code against unlocked features. Returns error message or null.
@@ -106,6 +112,11 @@ function validateCode(code) {
         const methodCall = t.match(/^robot\.(\w+)\s*\(/);
         if (methodCall && !unlocked.methods.has(methodCall[1]))
             return `Line ${i + 1}: "robot.${methodCall[1]}()" is not unlocked yet. It can be purchased in the shop.`;
+
+        // Check for locked sensor functions
+        const sensorCall = lines[i].match(/machineReady\s*\(/);
+        if (sensorCall && !unlocked.sensors.has('machineReady'))
+            return `Line ${i + 1}: "machineReady()" is not unlocked yet. Purchase "Stock Check" to unlock it.`;
     }
     return null;
 }
@@ -200,7 +211,7 @@ function startSpawning() {
 const ENABLED_METHODS = [
     'moveToCustomer', 'takeOrder', 'moveToCocktail',
     'serve', 'cleanTable', 'backToInitialPosition', 'moveTo',
-    'serveCoffee',
+    'serveCoffee', 'refill',
 ];
 
 function buildRobotProxy() {
@@ -291,14 +302,38 @@ function buildRobotProxy() {
             // Small delay before robot starts preparing
             await new Promise(r => setTimeout(r, 1000));
 
-            // Prepare coffee (shows progress ring)
-            await robot.serveCoffee(3000);
+            // Bean logic only applies after Stock Check is purchased
+            if (unlocked.conds) {
+                if (robot.beans > 0) {
+                    robot.beans--;
+                    updateBeansDisplay();
 
-            // Customer leaves and queue advances
-            await frontCustomer.leaveWindowQueue(() => {
-                addMoney(coffee.price);
-                addCustomerCount();
-            }, coffee.price);
+                    await robot.serveCoffee(3000);
+
+                    await frontCustomer.leaveWindowQueue(() => {
+                        addMoney(coffee.price);
+                        addCustomerCount();
+                    }, coffee.price);
+                } else {
+                    // No beans — customer leaves angry
+                    await frontCustomer.leaveWindowQueueAngry(() => {
+                        addMoney(-1);
+                    }, 1);
+                }
+            } else {
+                // Pre-upgrade: unlimited beans
+                await robot.serveCoffee(3000);
+
+                await frontCustomer.leaveWindowQueue(() => {
+                    addMoney(coffee.price);
+                    addCustomerCount();
+                }, coffee.price);
+            }
+        },
+
+        async refill() {
+            await robot.refill(2000);
+            updateBeansDisplay();
         },
 
         async backToInitialPosition() {
@@ -490,6 +525,7 @@ async function executeEditorCode() {
 
     const sandbox = {
         robot:   robotProxy,
+        machineReady: () => robot.beans > 0,
         wait,
         console,
         __line:  async (n) => {
@@ -622,18 +658,24 @@ const firmwareUpgrades = [
         onBuy() {
             unlocked.loops = true;
             _marketingUnlocked = true;
+            startSpawning();
         },
     },
     {
-        id: 'conditionals',
-        name: 'Decision Engine',
+        id: 'stockcheck',
+        name: 'Stock Check',
         version: 'v1.2',
-        desc: 'Unlock if / else conditionals.',
-        cost: 15,
+        desc: 'Check bean stock before serving. Unlocks if/else, machineReady() and robot.refill().',
+        cost: 5,
         purchased: false,
         requires: 'marketing',
         onBuy() {
             unlocked.conds = true;
+            unlocked.methods.add('refill');
+            unlocked.sensors.add('machineReady');
+            robot.beans = 15;
+            beansDisplay.style.display = '';
+            updateBeansDisplay();
         },
     },
 ];

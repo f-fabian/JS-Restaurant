@@ -56,6 +56,7 @@ export class Customer {
         this.served      = false;
         this.visible     = false;   // hidden until the cycle explicitly shows the customer
         this.paymentAnim = null;
+        this.angryAnim   = null;
         this.mode        = 'table'; // 'table' (default) or 'window'
     }
 
@@ -246,6 +247,32 @@ export class Customer {
         Customer.advanceWindowQueue();
     }
 
+    // Window mode: no beans — customer leaves angry with a red penalty animation.
+    async leaveWindowQueueAngry(onPenalty, penalty = 1) {
+        Customer._windowQueue.shift();
+
+        this.showOrder = false;
+        this.served = true;
+        onPenalty(penalty);
+
+        // Red floating penalty animation
+        const spriteTop = (this.y + this.size) - this.sprite.frameH * SPRITE_SCALE * SPRITE_ANCHOR_Y;
+        this.angryAnim = { y: spriteTop - 10, alpha: 1.0, amount: penalty };
+
+        // Walk to exit
+        const wp39 = POSITIONS.WAYPOINTS.find(w => w.id === 39);
+        const wp40 = POSITIONS.WAYPOINTS.find(w => w.id === 40);
+        await this._moveToPoint(wp39.x, wp39.y, false);
+        await this._moveToPoint(wp40.x, wp40.y);
+
+        this.visible   = false;
+        this.seated    = false;
+        this.served    = false;
+        this.angryAnim = null;
+
+        Customer.advanceWindowQueue();
+    }
+
     // Table mode: customer consumes, pays, walks out through corridors.
     async consumeAndLeave(onPayment, price = 5) {
         // 1. Consume for 4 seconds
@@ -369,6 +396,25 @@ export class Customer {
             a.y     -= 1.5;
             a.alpha -= 0.015;
             if (a.alpha <= 0) this.paymentAnim = null;
+        }
+
+        // Angry penalty animation (red, shows -$N)
+        if (this.angryAnim) {
+            const a = this.angryAnim;
+            ctx.save();
+            ctx.globalAlpha = a.alpha;
+            ctx.font        = "bold 24px monospace";
+            ctx.fillStyle   = "#e53935";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth   = 3;
+            const label = `-$${a.amount}`;
+            ctx.strokeText(label, feetX - 14, a.y);
+            ctx.fillText(label,   feetX - 14, a.y);
+            ctx.restore();
+
+            a.y     -= 1.5;
+            a.alpha -= 0.015;
+            if (a.alpha <= 0) this.angryAnim = null;
         }
     }
 }

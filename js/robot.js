@@ -38,6 +38,9 @@ export class Robot {
 
         // Progress ring animation (used by serveCoffee)
         this._progress     = null; // { progress: 0..1 } or null
+
+        // Bean stock
+        this.beans = 15;
     }
 
     // Set a predicate that must return true before the robot is allowed to go home.
@@ -179,6 +182,28 @@ export class Robot {
 
                 if (elapsed >= duration) {
                     this._progress = null;
+                    resolve();
+                    return;
+                }
+                requestAnimationFrame(tick);
+            };
+            requestAnimationFrame(tick);
+        });
+    }
+
+    // Refill bean stock. Takes longer than serving (~2s). Resets beans to 15.
+    refill(duration = 2000) {
+        return new Promise(resolve => {
+            this._progress = { value: 0 };
+            const start = performance.now();
+
+            const tick = () => {
+                const elapsed = performance.now() - start;
+                this._progress.value = Math.min(elapsed / duration, 1);
+
+                if (elapsed >= duration) {
+                    this._progress = null;
+                    this.beans = 15;
                     resolve();
                     return;
                 }
