@@ -15,24 +15,21 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 - [x] Manejo de errores basico (catch + mostrar al usuario)
 
 ## Progresion de niveles (DISEÑO PENDIENTE)
-- [ ] clientes viniendo desde el comienzo y no cuando tocamos en run.
+- [x] clientes viniendo desde el comienzo y no cuando tocamos en run.
 - [ ] el juego se pausa si cambiamos de ventana.
 - [ ] Nivel 1: acciones basicas (1-2 funciones). Se ejecuta UNA vez por RUN
+- [ ] Ventana de hints.
 - [ ] Nivel 2: mas funciones, secuencias mas largas
 - [ ] Nivel 3: desbloquear `while` — automatizacion
 - [ ] Nivel 4: desbloquear `if/else` — toma de decisiones
 - [ ] Nivel 5+: funciones avanzadas (takeOrder, makeCocktail, etc.)
-
-### Problema abierto: primer nivel
-- Debe tener sentido narrativo (no limpiar 10 veces una mesa limpia)
-- La accion repetitiva debe justificar la necesidad del `while`
-- Los clientes llegan → ensucian mesas → necesitas limpiar → negocio crece → necesitas while
 
 ## Tienda / Firmware Updates
 - [ ] Sistema de dinero (ya existe parcialmente)
 - [ ] Tienda con "arbol de conceptos" desbloqueables con dinero
 - [ ] Narrativa: "Firmware update" del robot para nuevas capacidades
 - [ ] El editor rechaza keywords/funciones no desbloqueadas
+- [ ] BUG: while no spawnea automaticamente clientes
 
 ## Manejo de errores (2 fases)
 ### Fase 1 (MVP)
@@ -52,9 +49,7 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 
 BUGS
 
-original:
-- en la primera vuelta viene 1 cliente al cliquear en run
-- boton run se bloquea
+
 
 update while:
 - al comprar while no comienzan a venir automaticamente
