@@ -58,14 +58,14 @@ setTimeout(async () => {
 }, 1500);
 
 // ── HUD counters ──────────────────────────────────────────────────────
-let money = 0;
+let money = 5;
 const moneyDisplay = document.getElementById("moneyDisplay");
 function addMoney(amount) {
     money += amount;
     moneyDisplay.textContent = `$ ${money}`;
 }
 
-let servedCount = 0;
+let servedCount = 6;
 const customerDisplay = document.getElementById("customerDisplay");
 const beansDisplay    = document.getElementById("beansDisplay");
 
@@ -158,6 +158,19 @@ async function spawnCustomerLoop(customer, initialDelay) {
 let _marketingUnlocked = false;
 
 async function windowSpawnLoop() {
+    // If there's already a customer in the queue, wait for them to leave first
+    if (!_marketingUnlocked && Customer._windowQueue.length > 0) {
+        const current = Customer._windowQueue[0];
+        await new Promise(resolve => {
+            const check = () => {
+                if (!current.visible) resolve();
+                else setTimeout(check, 500);
+            };
+            check();
+        });
+        await wait(randBetween(500, 1000));
+    }
+
     while (_spawningActive) {
         // Find a free customer instance from the pool
         const free = customers.find(c => !c.visible);
@@ -428,8 +441,11 @@ function showErrorPopup(message) {
     setTimeout(() => popup.remove(), 8000);
 }
 
+let _hintPopup = null;
+let _hintArrow = null;
+
 function showHintPopup() {
-    const fadeSpeed = '2s';
+    const fadeSpeed = '0.5s';
 
     // Hint popup
     const popup = document.createElement('div');
@@ -447,6 +463,7 @@ function showHintPopup() {
         Serving customers one by one is slow... There must be a better way.
         <span style="color:#4fc3f7">Check for available updates.</span>
     `;
+    _hintPopup = popup;
     document.body.appendChild(popup);
 
     // Arrow pointing up toward the Updates button
@@ -457,6 +474,7 @@ function showHintPopup() {
         opacity: 0; transition: opacity ${fadeSpeed} ease;
     `;
     arrow.textContent = '\u25B2'; // ▲
+    _hintArrow = arrow;
     document.body.appendChild(arrow);
 
     // Sequence: hint → arrow → updates button
@@ -470,12 +488,6 @@ function showHintPopup() {
         if (buildFirmwarePanel.reveal) buildFirmwarePanel.reveal();
     }, 4000);
 
-    // Auto-dismiss hint + arrow after 12s
-    setTimeout(() => {
-        popup.style.opacity = '0';
-        arrow.style.opacity = '0';
-        setTimeout(() => { popup.remove(); arrow.remove(); }, 2000);
-    }, 7000);
 }
 
 // ── Editor code execution engine ──────────────────────────────────────
@@ -617,25 +629,13 @@ import('./code-editor.js')
     });
 
 runBtn.addEventListener('click', () => {
-    runBtn.disabled  = true;
-    runBtn.innerHTML = '▶ <span>RUNNING</span>';
-    stepBtn.disabled = true;
-
     // Start autonomous customer spawning
     startSpawning();
 
     // Execute whatever the player wrote in the editor
     executeEditorCode()
-        .then(() => {
-            runBtn.disabled  = false;
-            runBtn.innerHTML = '▶ <span>RUN</span>';
-            stepBtn.disabled = false;
-        })
         .catch(err => {
             console.error('[IDE]', err);
-            runBtn.disabled  = false;
-            runBtn.innerHTML = '▶ <span>RUN</span>';
-            stepBtn.disabled = false;
         });
 });
 
@@ -799,7 +799,11 @@ function buildFirmwarePanel() {
         panel.style.display = open ? 'block' : 'none';
         toggleBtn.style.borderColor = open ? '#66bb6a' : '#4fc3f7';
         toggleBtn.style.color = open ? '#66bb6a' : '#4fc3f7';
-        if (open) renderItems(); // refresh state
+        if (open) {
+            if (_hintPopup) { _hintPopup.remove(); _hintPopup = null; }
+            if (_hintArrow) { _hintArrow.remove(); _hintArrow = null; }
+            renderItems();
+        }
     });
 }
 
