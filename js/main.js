@@ -203,7 +203,7 @@ function showWelcomeScreen() {
         overlay.style.opacity = '0';
         setTimeout(() => {
             overlay.remove();
-            spawnFirstCustomer();
+            showTutorial();
         }, 500);
     });
 
@@ -217,6 +217,142 @@ function showWelcomeScreen() {
 }
 
 showWelcomeScreen();
+
+// ── Tutorial ─────────────────────────────────────────────────────────
+function showTutorial() {
+    const font = '"Cascadia Code", "Fira Code", Consolas, monospace';
+    const accent = '#4fc3f7';
+
+    const pages = [
+        {
+            title: 'Welcome, Developer',
+            body: `You've just been hired to run <span style="color:${accent}">Burachok JS Bar</span> — a small coffee shop on a busy street.\n\nThere's just one catch: your only employee is a <span style="color:${accent}">robot</span>, and it doesn't do anything on its own.`,
+        },
+        {
+            title: 'Your Job',
+            body: `You need to <span style="color:${accent}">write code</span> to tell the robot what to do.\n\nServe coffee to customers, earn money, and unlock new abilities to grow your business.`,
+        },
+        {
+            title: 'The IDE',
+            body: `On the right side of the screen you'll find the <span style="color:#a78bfa">IDE</span> — your code editor.\n\nWrite commands like <span style="color:${accent}">robot.serveCoffee()</span> and press <span style="color:${accent}">RUN</span> to execute them.`,
+        },
+        {
+            title: 'Let\'s Start',
+            body: `A customer is about to arrive. Open the IDE, write your first line of code, and serve them a coffee.\n\n<span style="color:#999">Hint: try writing</span> <span style="color:${accent}">robot.serveCoffee()</span>`,
+        },
+    ];
+
+    let currentPage = 0;
+
+    // Overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 200000; background: rgba(0,0,0,0.5);
+        display: flex; align-items: center; justify-content: center;
+    `;
+
+    // Card
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: #1a1a2e; border: 2px solid ${accent}; border-radius: 12px;
+        width: min(440px, 90vw); min-height: 260px;
+        font-family: ${font}; color: #e0e0e0;
+        box-shadow: 0 8px 48px rgba(0,0,0,0.8);
+        display: flex; flex-direction: column;
+        opacity: 0; transform: scale(0.95);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+    `;
+
+    // Title area
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = `
+        padding: 20px 24px 12px; font-size: 20px; font-weight: bold;
+        color: ${accent}; letter-spacing: 1px;
+        border-bottom: 1px solid #333;
+    `;
+
+    // Body area
+    const bodyEl = document.createElement('div');
+    bodyEl.style.cssText = `
+        padding: 20px 24px; flex: 1;
+        font-size: 14px; line-height: 1.8; color: #ccc;
+        white-space: pre-wrap;
+    `;
+
+    // Footer
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+        padding: 12px 24px 16px;
+        display: flex; justify-content: space-between; align-items: center;
+    `;
+
+    // Page indicator
+    const pageIndicator = document.createElement('div');
+    pageIndicator.style.cssText = `font-size: 12px; color: #555;`;
+
+    // Next button
+    const nextBtn = document.createElement('button');
+    nextBtn.style.cssText = `
+        background: ${accent}; color: #1a1a2e;
+        border: 2px solid ${accent}; border-radius: 8px;
+        padding: 8px 24px; cursor: pointer;
+        font-family: ${font}; font-size: 13px; font-weight: bold;
+        letter-spacing: 1px; text-transform: uppercase;
+        transition: background 0.2s ease, color 0.2s ease;
+    `;
+    nextBtn.addEventListener('mouseenter', () => {
+        nextBtn.style.background = '#1a1a2e';
+        nextBtn.style.color = accent;
+    });
+    nextBtn.addEventListener('mouseleave', () => {
+        nextBtn.style.background = accent;
+        nextBtn.style.color = '#1a1a2e';
+    });
+
+    footer.append(pageIndicator, nextBtn);
+    card.append(titleEl, bodyEl, footer);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    function renderPage() {
+        const page = pages[currentPage];
+        titleEl.textContent = page.title;
+        bodyEl.innerHTML = page.body;
+        pageIndicator.textContent = `${currentPage + 1} / ${pages.length}`;
+
+        const isLast = currentPage === pages.length - 1;
+        nextBtn.textContent = isLast ? 'Start' : 'Next';
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < pages.length - 1) {
+            currentPage++;
+            renderPage();
+        } else {
+            // Close tutorial
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.95)';
+            overlay.style.transition = 'opacity 0.4s ease';
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                // Open the IDE
+                if (!_ideOpen) ideBtn.click();
+                // Spawn first customer
+                spawnFirstCustomer();
+            }, 400);
+        }
+    });
+
+    renderPage();
+
+    // Fade in
+    requestAnimationFrame(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'scale(1)';
+    });
+}
 
 // ── HUD counters ──────────────────────────────────────────────────────
 let money = 5;
@@ -957,7 +1093,7 @@ const { win: controlsWin, content: controlsContent } = wm.spawn({
 
 // ── IDE pill button (fixed position, styled like Updates/Hints) ──
 const ideColor = '#a78bfa';  // soft purple
-let _ideOpen = true;
+let _ideOpen = false;
 const ideBtn = document.createElement('button');
 ideBtn.textContent = 'IDE';
 ideBtn.style.cssText = `
@@ -998,6 +1134,10 @@ const ideCloseNew = ideCloseBtn.cloneNode(true);
 ideCloseBtn.parentNode.replaceChild(ideCloseNew, ideCloseBtn);
 ideCloseNew.addEventListener('click', () => { ideBtn.click(); });
 
+// Start with IDE closed
+controlsWin.style.display = 'none';
+ideBtn.style.background = '#1e1e1e';
+ideBtn.style.color = ideColor;
 
 // Content = editor (flex:1) + button bar (fixed height)
 controlsContent.style.cssText =
