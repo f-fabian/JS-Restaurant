@@ -472,9 +472,9 @@ function _buildHintsButton() {
     btn.style.cssText = `
         position: fixed; top: 62px; left: 12px; z-index: 100000;
         background: #1e1e1e; color: #ffb74d; border: 2px solid #ffb74d;
-        border-radius: 8px; padding: 12px 24px; cursor: pointer;
+        border-radius: 8px; padding: 12px 0; cursor: pointer; width: 148px;
         font-family: ${_font}; font-size: 16px; font-weight: bold;
-        letter-spacing: 1px; text-transform: uppercase;
+        letter-spacing: 1px; text-transform: uppercase; text-align: center;
         opacity: 0; pointer-events: none;
         transition: opacity 2s ease, background 0.2s ease, color 0.2s ease;
     `;
@@ -507,6 +507,11 @@ function _buildHintsButton() {
             btn.style.background = '#ffb74d';
             btn.style.color = '#1e1e1e';
             _renderHintsList();
+            // Show the selected hint's content
+            if (_hints.length > 0) {
+                if (_selectedHint < 0) _selectedHint = 0;
+                _hintsBody.innerHTML = _hints[_selectedHint].body;
+            }
         } else {
             btn.style.background = '#1e1e1e';
             btn.style.color = '#ffb74d';
@@ -528,6 +533,15 @@ function _buildHintsWindow() {
     _hintsWin = win;
     // Start hidden
     win.style.display = 'none';
+
+    // Override close button — just hide, no taskbar pill
+    // Override close button — delegate to the Hints toggle button
+    const wmCloseBtn = win.querySelector('.wm-btn-close');
+    const newClose = wmCloseBtn.cloneNode(true);  // clone removes old listeners
+    wmCloseBtn.parentNode.replaceChild(newClose, wmCloseBtn);
+    newClose.addEventListener('click', () => {
+        if (_hintsBtn) _hintsBtn.click();  // reuse toggle logic
+    });
 
     content.style.cssText =
         'display:flex; flex-direction:row; padding:0; overflow:hidden; background:#1e1e1e;';
@@ -894,9 +908,9 @@ function buildFirmwarePanel() {
     toggleBtn.style.cssText = `
         position: fixed; top: 12px; left: 12px; z-index: 100000;
         background: #1e1e1e; color: #4fc3f7; border: 2px solid #4fc3f7;
-        border-radius: 8px; padding: 12px 24px; cursor: pointer;
+        border-radius: 8px; padding: 12px 0; cursor: pointer; width: 148px;
         font-family: ${font}; font-size: 16px; font-weight: bold;
-        letter-spacing: 1px; text-transform: uppercase;
+        letter-spacing: 1px; text-transform: uppercase; text-align: center;
         opacity: 0; pointer-events: none;
         transition: opacity 2s ease, background 0.2s ease, color 0.2s ease;
     `;
