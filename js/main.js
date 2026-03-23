@@ -24,7 +24,7 @@ const coffee = new Cocktail("Coffee", "/assets/aperol.png", 1); // TODO: replace
 
 // ── Debug flags ──────────────────────────────────────────────────────
 const DEBUG_DUMMIES    = false;
-const DEBUG_SHOW_BTNS  = false;  // true = Updates & Hints buttons visible from start
+const DEBUG_SHOW_BTNS  = true;  // true = Updates & Hints buttons visible from start
 const dummy1 = new Robot();
 const dummy2 = new Robot();
 dummy1.x = 200; dummy1.y = 450;
@@ -50,12 +50,14 @@ function loop() {
 loop();
 
 // ── Spawn first customer automatically after 0.5s ──
+let _firstCustomerSpawned = false;
 setTimeout(async () => {
     const first = customers.find(c => !c.visible);
     if (first) {
         first.reset();
         await first.enterWindowQueue();
     }
+    _firstCustomerSpawned = true;
 }, 1500);
 
 // ── HUD counters ──────────────────────────────────────────────────────
@@ -159,17 +161,29 @@ async function spawnCustomerLoop(customer, initialDelay) {
 let _marketingUnlocked = false;
 
 async function windowSpawnLoop() {
-    // If there's already a customer in the queue, wait for them to leave first
-    if (!_marketingUnlocked && Customer._windowQueue.length > 0) {
-        const current = Customer._windowQueue[0];
-        await new Promise(resolve => {
-            const check = () => {
-                if (!current.visible) resolve();
-                else setTimeout(check, 500);
-            };
-            check();
-        });
-        await wait(randBetween(500, 1000));
+    // Wait for the initial auto-spawned customer before spawning more
+    if (!_marketingUnlocked) {
+        // If first customer hasn't spawned yet, wait for it
+        if (!_firstCustomerSpawned) {
+            await new Promise(resolve => {
+                const check = () => {
+                    if (_firstCustomerSpawned) resolve();
+                    else setTimeout(check, 100);
+                };
+                check();
+            });
+        }
+        const existing = customers.find(c => c.visible);
+        if (existing) {
+            await new Promise(resolve => {
+                const check = () => {
+                    if (!existing.visible) resolve();
+                    else setTimeout(check, 500);
+                };
+                check();
+            });
+            await wait(randBetween(500, 1000));
+        }
     }
 
     while (_spawningActive) {
@@ -564,6 +578,14 @@ function _renderHintsList() {
 
 // ── Floating hint toast (individual, dismissable) ──
 function _showHintToast(title, body, onClose, topPx = 63) {
+    // Blocking overlay — prevents interaction with anything else
+    const blocker = document.createElement('div');
+    blocker.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 100000; background: rgba(0,0,0,0.3);
+    `;
+    document.body.appendChild(blocker);
+
     const toast = document.createElement('div');
     toast.style.cssText = `
         position: fixed; top: ${topPx}px; left: 12px; z-index: 100001;
@@ -588,8 +610,11 @@ function _showHintToast(title, body, onClose, topPx = 63) {
     closeBtn.addEventListener('mouseleave', () => { closeBtn.style.opacity = '1'; });
     closeBtn.addEventListener('click', () => {
         toast.style.opacity = '0';
+        blocker.style.opacity = '0';
+        blocker.style.transition = 'opacity 0.5s ease';
         setTimeout(() => {
             toast.remove();
+            blocker.remove();
             if (onClose) onClose();
         }, 500);
     });
@@ -605,9 +630,9 @@ function _showHintToast(title, body, onClose, topPx = 63) {
 }
 
 // ── Flash the Hints button to signal a new hint was archived ──
-const FLASH_IN   = 0.35;  // seconds — fade in (smooth ramp up)
-const FLASH_HOLD = 50;   // ms — how long it stays lit
-const FLASH_OUT  = 0.4;   // seconds — fade out
+const FLASH_IN   = 0.25;  // seconds — fade in (smooth ramp up)
+const FLASH_HOLD = 15;   // ms — how long it stays lit
+const FLASH_OUT  = 0.25;   // seconds — fade out
 function _flashHintsButton() {
     if (!_hintsBtn) return;
     _hintsBtn.style.transition = `background ${FLASH_IN}s ease-in, color ${FLASH_IN}s ease-in`;
