@@ -22,8 +22,9 @@ const cocktails = [
 ];
 const coffee = new Cocktail("Coffee", "/assets/aperol.png", 1); // TODO: replace with coffee sprite
 
-// ── Debug dummies (set DEBUG_DUMMIES = false to disable) ─────────────
-const DEBUG_DUMMIES = false;
+// ── Debug flags ──────────────────────────────────────────────────────
+const DEBUG_DUMMIES    = false;
+const DEBUG_SHOW_BTNS  = false;  // true = Updates & Hints buttons visible from start
 const dummy1 = new Robot();
 const dummy2 = new Robot();
 dummy1.x = 200; dummy1.y = 450;
@@ -441,13 +442,65 @@ function showErrorPopup(message) {
     setTimeout(() => popup.remove(), 8000);
 }
 
-// ── Hints window ─────────────────────────────────────────────────────
+// ── Hints system ─────────────────────────────────────────────────────
 const _hints = [];       // { title, body }
 let _hintsList = null;   // DOM: left sidebar list
 let _hintsBody = null;   // DOM: right content viewer
 let _hintsWin  = null;   // the wm window element
+let _hintsBtn  = null;   // fixed button (like Updates)
 let _selectedHint = -1;
+const _font = '"Cascadia Code", "Fira Code", Consolas, monospace';
 
+// ── Fixed "Hints" button (same style as Updates, positioned below it) ──
+function _buildHintsButton() {
+    const btn = document.createElement('button');
+    btn.textContent = 'Hints';
+    btn.style.cssText = `
+        position: fixed; top: 62px; left: 12px; z-index: 100000;
+        background: #1e1e1e; color: #ffb74d; border: 2px solid #ffb74d;
+        border-radius: 8px; padding: 12px 24px; cursor: pointer;
+        font-family: ${_font}; font-size: 16px; font-weight: bold;
+        letter-spacing: 1px; text-transform: uppercase;
+        opacity: 0; pointer-events: none;
+        transition: opacity 2s ease, background 0.2s ease, color 0.2s ease;
+    `;
+    let _hintsOpen = false;
+    btn.addEventListener('mouseenter', () => {
+        if (_hintsOpen) return;
+        btn.style.background = '#ffb74d';
+        btn.style.color = '#1e1e1e';
+    });
+    btn.addEventListener('mouseleave', () => {
+        if (_hintsOpen) return;
+        btn.style.background = '#1e1e1e';
+        btn.style.color = '#ffb74d';
+    });
+    document.body.appendChild(btn);
+    _hintsBtn = btn;
+
+    // Fade in
+    requestAnimationFrame(() => {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+    });
+
+    btn.addEventListener('click', () => {
+        if (!_hintsWin) _buildHintsWindow();
+        const isHidden = _hintsWin.style.display === 'none';
+        _hintsWin.style.display = isHidden ? '' : 'none';
+        _hintsOpen = isHidden;
+        if (isHidden) {
+            btn.style.background = '#ffb74d';
+            btn.style.color = '#1e1e1e';
+            _renderHintsList();
+        } else {
+            btn.style.background = '#1e1e1e';
+            btn.style.color = '#ffb74d';
+        }
+    });
+}
+
+// ── Hints window (split panel: sidebar + viewer) ──
 function _buildHintsWindow() {
     const HINTS_W = 460;
     const HINTS_H = 300;
@@ -459,6 +512,8 @@ function _buildHintsWindow() {
         height: HINTS_H,
     });
     _hintsWin = win;
+    // Start hidden
+    win.style.display = 'none';
 
     content.style.cssText =
         'display:flex; flex-direction:row; padding:0; overflow:hidden; background:#1e1e1e;';
@@ -476,26 +531,23 @@ function _buildHintsWindow() {
     const viewer = document.createElement('div');
     viewer.style.cssText = `
         flex: 1; padding: 16px 20px; overflow-y: auto;
-        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
-        font-size: 13px; line-height: 1.7; color: #d4d4d4;
+        font-family: ${_font}; font-size: 13px; line-height: 1.7; color: #d4d4d4;
         user-select: text; white-space: pre-wrap;
     `;
     _hintsBody = viewer;
 
     content.append(sidebar, viewer);
-
-    // Start hidden — the close button sends it to the taskbar pill automatically
-    win.style.display = 'none';
 }
 
 function _renderHintsList() {
+    if (!_hintsList) return;
     _hintsList.innerHTML = '';
     _hints.forEach((h, i) => {
         const item = document.createElement('div');
         item.textContent = h.title;
         item.style.cssText = `
             padding: 6px 12px; cursor: pointer; font-size: 12px;
-            font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+            font-family: ${_font};
             color: ${i === _selectedHint ? '#fff' : '#aaa'};
             background: ${i === _selectedHint ? '#094771' : 'transparent'};
             border-left: 2px solid ${i === _selectedHint ? '#4fc3f7' : 'transparent'};
@@ -510,26 +562,109 @@ function _renderHintsList() {
     });
 }
 
-function addHint(title, body) {
-    _hints.push({ title, body });
-    _selectedHint = _hints.length - 1;
+// ── Floating hint toast (individual, dismissable) ──
+function _showHintToast(title, body, onClose, topPx = 63) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; top: ${topPx}px; left: 12px; z-index: 100001;
+        background: #1a1a2e; border: 2px solid #ffb74d; border-radius: 8px;
+        padding: 16px 20px; max-width: 380px; min-width: 280px;
+        font-family: ${_font}; font-size: 14px; line-height: 1.6; color: #e0e0e0;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+        opacity: 0; transition: opacity 0.5s ease;
+    `;
 
-    if (!_hintsWin) _buildHintsWindow();
+    // Close button (top-right, red circle with white X)
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '\u00D7';
+    closeBtn.style.cssText = `
+        position: absolute; top: 8px; right: 8px;
+        width: 22px; height: 22px; border: none; border-radius: 50%;
+        background: #e05050; color: #fff; font-size: 14px; line-height: 1;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        font-family: monospace; font-weight: bold; transition: opacity 0.15s;
+    `;
+    closeBtn.addEventListener('mouseenter', () => { closeBtn.style.opacity = '0.8'; });
+    closeBtn.addEventListener('mouseleave', () => { closeBtn.style.opacity = '1'; });
+    closeBtn.addEventListener('click', () => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.remove();
+            if (onClose) onClose();
+        }, 500);
+    });
 
-    // Show the window and select the new hint
-    _hintsWin.style.display = '';
-    _renderHintsList();
-    _hintsBody.innerHTML = body;
+    const content = document.createElement('div');
+    content.style.cssText = 'padding-right: 20px;';
+    content.innerHTML = `<div style="color:#ffb74d;font-weight:bold;margin-bottom:8px;font-size:13px">${title}</div>${body}`;
+
+    toast.append(closeBtn, content);
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+}
+
+// ── Flash the Hints button to signal a new hint was archived ──
+const FLASH_IN   = 0.35;  // seconds — fade in (smooth ramp up)
+const FLASH_HOLD = 50;   // ms — how long it stays lit
+const FLASH_OUT  = 0.4;   // seconds — fade out
+function _flashHintsButton() {
+    if (!_hintsBtn) return;
+    _hintsBtn.style.transition = `background ${FLASH_IN}s ease-in, color ${FLASH_IN}s ease-in`;
+    _hintsBtn.style.background = '#ffb74d';
+    _hintsBtn.style.color = '#1e1e1e';
+    setTimeout(() => {
+        _hintsBtn.style.transition = `background ${FLASH_OUT}s ease-out, color ${FLASH_OUT}s ease-out`;
+        _hintsBtn.style.background = '#1e1e1e';
+        _hintsBtn.style.color = '#ffb74d';
+        setTimeout(() => {
+            _hintsBtn.style.transition = 'opacity 2s ease, background 0.2s ease, color 0.2s ease';
+        }, FLASH_OUT * 1000);
+    }, FLASH_IN * 1000 + FLASH_HOLD);
+}
+// window.flash = _flashHintsButton;  // DEBUG — call flash() in console to test
+
+// ── Public: add a hint (shows toast, archives on dismiss) ──
+function addHint(title, body, onClose) {
+    // Show floating toast — on close, archive into the hints window
+    _showHintToast(title, body, () => {
+        _hints.push({ title, body });
+        _selectedHint = _hints.length - 1;
+        if (_hintsWin) _renderHintsList();
+        if (_hintsBtn) _flashHintsButton();
+        if (onClose) onClose();
+    });
 }
 
 function showHintPopup() {
-    addHint(
-        'Updates available',
-        `<span style="color:#ffb74d;font-weight:bold">HINT</span>: `
-        + `Serving customers one by one is slow... There must be a better way.\n\n`
-        + `<span style="color:#4fc3f7">Check for available updates.</span>`
-    );
+    const hintTitle = 'Updates available';
+    const hintBody  = `Serving customers one by one is slow... There must be a better way.\n\n`
+        + `<span style="color:#4fc3f7">Check for available updates.</span>`;
 
+    // 1) Show the hint toast
+    _showHintToast(hintTitle, hintBody, () => {
+        // Archive this hint
+        _hints.push({ title: hintTitle, body: hintBody });
+        _selectedHint = _hints.length - 1;
+
+        // 2) Show a second toast explaining the Hints button (NOT archived)
+        _showHintToast(
+            'Hints saved',
+            `All hints are saved for you. Click the <span style="color:#ffb74d;font-weight:bold">Hints</span> button to read them again anytime.`,
+            () => {
+                // flash once the tutorial toast is dismissed too
+                if (_hintsBtn) _flashHintsButton();
+            },
+            113  // below the Hints button
+        );
+
+        // 3) After a delay, show the Hints button
+        setTimeout(() => {
+            if (!_hintsBtn) _buildHintsButton();
+        }, 2000);
+    });
+
+    // Show the Updates button after 2s
     setTimeout(() => {
         if (buildFirmwarePanel.reveal) buildFirmwarePanel.reveal();
     }, 2000);
@@ -738,8 +873,19 @@ function buildFirmwarePanel() {
         font-family: ${font}; font-size: 16px; font-weight: bold;
         letter-spacing: 1px; text-transform: uppercase;
         opacity: 0; pointer-events: none;
-        transition: opacity 2s ease;
+        transition: opacity 2s ease, background 0.2s ease, color 0.2s ease;
     `;
+    let _updatesOpen = false;
+    toggleBtn.addEventListener('mouseenter', () => {
+        if (_updatesOpen) return;
+        toggleBtn.style.background = '#4fc3f7';
+        toggleBtn.style.color = '#1e1e1e';
+    });
+    toggleBtn.addEventListener('mouseleave', () => {
+        if (_updatesOpen) return;
+        toggleBtn.style.background = '#1e1e1e';
+        toggleBtn.style.color = '#4fc3f7';
+    });
     document.body.appendChild(toggleBtn);
 
     // Expose reveal so addCustomerCount can trigger it
@@ -748,10 +894,21 @@ function buildFirmwarePanel() {
         toggleBtn.style.pointerEvents = 'auto';
     };
 
-    // Panel
+    if (DEBUG_SHOW_BTNS) buildFirmwarePanel.reveal();
+
+    // Overlay (click outside to close)
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 99998; display: none;
+    `;
+    document.body.appendChild(overlay);
+
+    // Panel (centered)
     const panel = document.createElement('div');
     panel.style.cssText = `
-        position: fixed; top: 52px; left: 12px; z-index: 99999;
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        z-index: 99999;
         background: #1a1a2e; border: 2px solid #4fc3f7; border-radius: 8px;
         padding: 16px; width: 280px; display: none;
         font-family: ${font}; font-size: 12px; color: #e0e0e0;
@@ -760,8 +917,21 @@ function buildFirmwarePanel() {
 
     // Header
     const header = document.createElement('div');
+    header.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333;';
     header.innerHTML = '<span style="color:#4fc3f7;font-weight:bold;font-size:14px">FIRMWARE UPDATES</span>';
-    header.style.cssText = 'margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #333;';
+
+    const panelCloseBtn = document.createElement('button');
+    panelCloseBtn.textContent = '\u00D7';
+    panelCloseBtn.style.cssText = `
+        width: 22px; height: 22px; border: none; border-radius: 50%;
+        background: #e05050; color: #fff; font-size: 14px; line-height: 1;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        font-family: monospace; font-weight: bold; flex-shrink: 0;
+    `;
+    panelCloseBtn.addEventListener('mouseenter', () => { panelCloseBtn.style.opacity = '0.8'; });
+    panelCloseBtn.addEventListener('mouseleave', () => { panelCloseBtn.style.opacity = '1'; });
+    header.appendChild(panelCloseBtn);
+
     panel.appendChild(header);
 
     // Items container
@@ -838,14 +1008,33 @@ function buildFirmwarePanel() {
     renderItems();
     document.body.appendChild(panel);
 
+    function openPanel() {
+        panel.style.display = 'block';
+        overlay.style.display = 'block';
+        _updatesOpen = true;
+        toggleBtn.style.background = '#4fc3f7';
+        toggleBtn.style.color = '#1e1e1e';
+        renderItems();
+    }
+
+    function closePanel() {
+        panel.style.display = 'none';
+        overlay.style.display = 'none';
+        _updatesOpen = false;
+        toggleBtn.style.background = '#1e1e1e';
+        toggleBtn.style.color = '#4fc3f7';
+    }
+
     // Toggle
     toggleBtn.addEventListener('click', () => {
-        const open = panel.style.display === 'none';
-        panel.style.display = open ? 'block' : 'none';
-        toggleBtn.style.borderColor = open ? '#66bb6a' : '#4fc3f7';
-        toggleBtn.style.color = open ? '#66bb6a' : '#4fc3f7';
-        if (open) renderItems();
+        if (_updatesOpen) closePanel();
+        else openPanel();
     });
+
+    // Click outside or close button to close
+    overlay.addEventListener('click', closePanel);
+    panelCloseBtn.addEventListener('click', closePanel);
 }
 
 buildFirmwarePanel();
+if (DEBUG_SHOW_BTNS) _buildHintsButton();
