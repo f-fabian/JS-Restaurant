@@ -24,7 +24,7 @@ const coffee = new Cocktail("Coffee", "/assets/aperol.png", 1); // TODO: replace
 
 // ── Debug flags ──────────────────────────────────────────────────────
 const DEBUG_DUMMIES    = false;
-const DEBUG_SHOW_BTNS  = true;  // true = Updates & Hints buttons visible from start
+const DEBUG_SHOW_BTNS  = false;  // true = Updates & Hints buttons visible from start
 const dummy1 = new Robot();
 const dummy2 = new Robot();
 dummy1.x = 200; dummy1.y = 450;
@@ -470,7 +470,7 @@ function _buildHintsButton() {
     const btn = document.createElement('button');
     btn.textContent = 'Hints';
     btn.style.cssText = `
-        position: fixed; top: 62px; left: 12px; z-index: 100000;
+        position: fixed; top: 12px; left: 12px; z-index: 100000;
         background: #1e1e1e; color: #ffb74d; border: 2px solid #ffb74d;
         border-radius: 8px; padding: 12px 0; cursor: pointer; width: 148px;
         font-family: ${_font}; font-size: 16px; font-weight: bold;
@@ -680,7 +680,7 @@ function showHintPopup() {
     const hintBody  = `Serving customers one by one is slow... There must be a better way.\n\n`
         + `<span style="color:#4fc3f7">Check for available updates.</span>`;
 
-    // 1) Show the hint toast
+    // 1) Show the hint toast (below Updates button at top:62px)
     _showHintToast(hintTitle, hintBody, () => {
         // Archive this hint
         _hints.push({ title: hintTitle, body: hintBody });
@@ -689,19 +689,19 @@ function showHintPopup() {
         // 2) Show a second toast explaining the Hints button (NOT archived)
         _showHintToast(
             'Hints saved',
-            `All hints are saved for you. Click the <span style="color:#ffb74d;font-weight:bold">Hints</span> button to read them again anytime.`,
+            `All hints are saved for you. Click the <span style="color:#ffb74d;font-weight:bold">Hints</span> button to read them again anytime. It will flash each time a new hint is saved.`,
             () => {
                 // flash once the tutorial toast is dismissed too
                 if (_hintsBtn) _flashHintsButton();
             },
-            113  // below the Hints button
+            63  // below the Hints button (now at top: 12px)
         );
 
         // 3) After a delay, show the Hints button
         setTimeout(() => {
             if (!_hintsBtn) _buildHintsButton();
         }, 2000);
-    });
+    }, 113);  // below the Updates button (now at top: 62px)
 
     // Show the Updates button after 2s
     setTimeout(() => {
@@ -789,13 +789,56 @@ const wm = new WindowManager();
 // ── Controls window ───────────────────────────────────────────────────
 const WIN_W = 320;
 const WIN_H = 380;
-const { content: controlsContent } = wm.spawn({
-    title:  'Controls',
+const { win: controlsWin, content: controlsContent } = wm.spawn({
+    title:  'Robot Controls',
     x:      window.innerWidth  - WIN_W - 20,
     y:      window.innerHeight - WIN_H - 20,
     width:  WIN_W,
     height: WIN_H,
 });
+
+// ── IDE pill button (fixed position, styled like Updates/Hints) ──
+const ideColor = '#a78bfa';  // soft purple
+let _ideOpen = true;
+const ideBtn = document.createElement('button');
+ideBtn.textContent = 'IDE';
+ideBtn.style.cssText = `
+    position: fixed; bottom: 10px; left: 12px; z-index: 100000;
+    background: ${ideColor}; color: #1e1e1e; border: 2px solid ${ideColor};
+    border-radius: 8px; padding: 12px 0; cursor: pointer; width: 148px;
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+    font-size: 16px; font-weight: bold;
+    letter-spacing: 1px; text-transform: uppercase; text-align: center;
+    transition: background 0.2s ease, color 0.2s ease;
+`;
+ideBtn.addEventListener('mouseenter', () => {
+    if (_ideOpen) return;
+    ideBtn.style.background = ideColor;
+    ideBtn.style.color = '#1e1e1e';
+});
+ideBtn.addEventListener('mouseleave', () => {
+    if (_ideOpen) return;
+    ideBtn.style.background = '#1e1e1e';
+    ideBtn.style.color = ideColor;
+});
+ideBtn.addEventListener('click', () => {
+    _ideOpen = !_ideOpen;
+    controlsWin.style.display = _ideOpen ? '' : 'none';
+    if (_ideOpen) {
+        ideBtn.style.background = ideColor;
+        ideBtn.style.color = '#1e1e1e';
+    } else {
+        ideBtn.style.background = '#1e1e1e';
+        ideBtn.style.color = ideColor;
+    }
+});
+document.body.appendChild(ideBtn);
+
+// Override close button — use IDE toggle instead of taskbar pill
+const ideCloseBtn = controlsWin.querySelector('.wm-btn-close');
+const ideCloseNew = ideCloseBtn.cloneNode(true);
+ideCloseBtn.parentNode.replaceChild(ideCloseNew, ideCloseBtn);
+ideCloseNew.addEventListener('click', () => { ideBtn.click(); });
 
 
 // Content = editor (flex:1) + button bar (fixed height)
@@ -906,7 +949,7 @@ function buildFirmwarePanel() {
     const toggleBtn = document.createElement('button');
     toggleBtn.textContent = 'Updates';
     toggleBtn.style.cssText = `
-        position: fixed; top: 12px; left: 12px; z-index: 100000;
+        position: fixed; top: 62px; left: 12px; z-index: 100000;
         background: #1e1e1e; color: #4fc3f7; border: 2px solid #4fc3f7;
         border-radius: 8px; padding: 12px 0; cursor: pointer; width: 148px;
         font-family: ${font}; font-size: 16px; font-weight: bold;
