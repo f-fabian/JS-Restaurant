@@ -441,53 +441,98 @@ function showErrorPopup(message) {
     setTimeout(() => popup.remove(), 8000);
 }
 
-let _hintPopup = null;
-let _hintArrow = null;
+// ── Hints window ─────────────────────────────────────────────────────
+const _hints = [];       // { title, body }
+let _hintsList = null;   // DOM: left sidebar list
+let _hintsBody = null;   // DOM: right content viewer
+let _hintsWin  = null;   // the wm window element
+let _selectedHint = -1;
+
+function _buildHintsWindow() {
+    const HINTS_W = 460;
+    const HINTS_H = 300;
+    const { win, content } = wm.spawn({
+        title:  'Hints',
+        x:      60,
+        y:      Math.round(window.innerHeight / 2 - HINTS_H / 2),
+        width:  HINTS_W,
+        height: HINTS_H,
+    });
+    _hintsWin = win;
+
+    content.style.cssText =
+        'display:flex; flex-direction:row; padding:0; overflow:hidden; background:#1e1e1e;';
+
+    // Left sidebar — hint titles
+    const sidebar = document.createElement('div');
+    sidebar.style.cssText = `
+        width: 140px; min-width: 100px; flex-shrink: 0;
+        background: #252526; border-right: 1px solid #333;
+        overflow-y: auto; padding: 4px 0;
+    `;
+    _hintsList = sidebar;
+
+    // Right panel — hint body
+    const viewer = document.createElement('div');
+    viewer.style.cssText = `
+        flex: 1; padding: 16px 20px; overflow-y: auto;
+        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+        font-size: 13px; line-height: 1.7; color: #d4d4d4;
+        user-select: text; white-space: pre-wrap;
+    `;
+    _hintsBody = viewer;
+
+    content.append(sidebar, viewer);
+
+    // Start hidden — the close button sends it to the taskbar pill automatically
+    win.style.display = 'none';
+}
+
+function _renderHintsList() {
+    _hintsList.innerHTML = '';
+    _hints.forEach((h, i) => {
+        const item = document.createElement('div');
+        item.textContent = h.title;
+        item.style.cssText = `
+            padding: 6px 12px; cursor: pointer; font-size: 12px;
+            font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
+            color: ${i === _selectedHint ? '#fff' : '#aaa'};
+            background: ${i === _selectedHint ? '#094771' : 'transparent'};
+            border-left: 2px solid ${i === _selectedHint ? '#4fc3f7' : 'transparent'};
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        `;
+        item.addEventListener('click', () => {
+            _selectedHint = i;
+            _renderHintsList();
+            _hintsBody.innerHTML = h.body;
+        });
+        _hintsList.appendChild(item);
+    });
+}
+
+function addHint(title, body) {
+    _hints.push({ title, body });
+    _selectedHint = _hints.length - 1;
+
+    if (!_hintsWin) _buildHintsWindow();
+
+    // Show the window and select the new hint
+    _hintsWin.style.display = '';
+    _renderHintsList();
+    _hintsBody.innerHTML = body;
+}
 
 function showHintPopup() {
-    const fadeSpeed = '0.5s';
-
-    // Hint popup
-    const popup = document.createElement('div');
-    popup.style.cssText = `
-        position: fixed; top: 100px; left: 12px; z-index: 100001;
-        background: #1a1a2e; border: 2px solid #ffb74d; border-radius: 8px;
-        padding: 18px 26px; max-width: 360px;
-        font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
-        font-size: 15px; line-height: 1.5; color: #e0e0e0;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.7);
-        opacity: 0; transition: opacity ${fadeSpeed} ease;
-    `;
-    popup.innerHTML = `
-        <span style="color:#ffb74d;font-weight:bold">HINT</span>:
-        Serving customers one by one is slow... There must be a better way.
-        <span style="color:#4fc3f7">Check for available updates.</span>
-    `;
-    _hintPopup = popup;
-    document.body.appendChild(popup);
-
-    // Arrow pointing up toward the Updates button
-    const arrow = document.createElement('div');
-    arrow.style.cssText = `
-        position: fixed; top: 52px; left: 34px; z-index: 100001;
-        font-size: 36px; color: #ffb74d;
-        opacity: 0; transition: opacity ${fadeSpeed} ease;
-    `;
-    arrow.textContent = '\u25B2'; // ▲
-    _hintArrow = arrow;
-    document.body.appendChild(arrow);
-
-    // Sequence: hint → arrow → updates button
-    requestAnimationFrame(() => { popup.style.opacity = '1'; });
-
-    setTimeout(() => {
-        arrow.style.opacity = '1';
-    }, 3000);
+    addHint(
+        'Updates available',
+        `<span style="color:#ffb74d;font-weight:bold">HINT</span>: `
+        + `Serving customers one by one is slow... There must be a better way.\n\n`
+        + `<span style="color:#4fc3f7">Check for available updates.</span>`
+    );
 
     setTimeout(() => {
         if (buildFirmwarePanel.reveal) buildFirmwarePanel.reveal();
-    }, 4000);
-
+    }, 2000);
 }
 
 // ── Editor code execution engine ──────────────────────────────────────
@@ -799,11 +844,7 @@ function buildFirmwarePanel() {
         panel.style.display = open ? 'block' : 'none';
         toggleBtn.style.borderColor = open ? '#66bb6a' : '#4fc3f7';
         toggleBtn.style.color = open ? '#66bb6a' : '#4fc3f7';
-        if (open) {
-            if (_hintPopup) { _hintPopup.remove(); _hintPopup = null; }
-            if (_hintArrow) { _hintArrow.remove(); _hintArrow = null; }
-            renderItems();
-        }
+        if (open) renderItems();
     });
 }
 
