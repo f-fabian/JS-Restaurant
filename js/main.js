@@ -234,11 +234,106 @@ function showTutorial() {
         },
         {
             title: 'The IDE',
-            body: `On the right side of the screen you'll find the <span style="color:#a78bfa">IDE</span> — your code editor.\n\nWrite commands like <span style="color:${accent}">robot.serveCoffee()</span> and press <span style="color:${accent}">RUN</span> to execute them.`,
+            body: `This is where you'll write code to control the robot. The <span style="color:${accent}">RUN</span> button executes your commands.\n\n<span style="color:#999">Try opening it — click the</span> <span style="color:#a78bfa">IDE</span> <span style="color:#999">button below.</span>`,
+            _handler: null,
+            onEnter() {
+                const self = this;
+                // After a short reading delay, raise IDE button and pulse it
+                setTimeout(() => {
+                    ideBtn.style.zIndex = '200001';
+                    // Pulse 3 times
+                    let count = 0;
+                    const pulseIn = () => {
+                        ideBtn.style.transition = 'background 0.5s ease-in-out, color 0.5s ease-in-out';
+                        ideBtn.style.background = ideColor;
+                        ideBtn.style.color = '#1e1e1e';
+                    };
+                    const pulseOut = () => {
+                        ideBtn.style.transition = 'background 0.6s ease-in-out, color 0.6s ease-in-out';
+                        ideBtn.style.background = '#1e1e1e';
+                        ideBtn.style.color = ideColor;
+                    };
+                    const doPulse = () => {
+                        if (count >= 3) {
+                            pulseOut();
+                            setTimeout(() => {
+                                ideBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
+                            }, 600);
+                            return;
+                        }
+                        pulseIn();
+                        setTimeout(() => {
+                            pulseOut();
+                            count++;
+                            setTimeout(doPulse, 500);
+                        }, 500);
+                    };
+                    doPulse();
+
+                    // When user clicks IDE button, raise the window too
+                    self._handler = () => {
+                        controlsWin.style.zIndex = '200001';
+                    };
+                    ideBtn.addEventListener('click', self._handler);
+                }, 1500);
+            },
+            onLeave() {
+                ideBtn.style.zIndex = '100000';
+                controlsWin.style.zIndex = '';
+                // Close IDE if open
+                if (_ideOpen) ideBtn.click();
+                if (this._handler) {
+                    ideBtn.removeEventListener('click', this._handler);
+                    this._handler = null;
+                }
+            },
+        },
+        {
+            title: 'Hints',
+            body: `Throughout the game you'll receive <span style="color:#ffb74d">hints</span> and tips. They are saved automatically so you can revisit them anytime.\n\nClick the <span style="color:#ffb74d">Hints</span> button to browse your collected advice. It will flash each time a new hint is added.`,
+            onEnter() {
+                setTimeout(() => {
+                    // Build button if needed (with its built-in fade)
+                    if (!_hintsBtn) _buildHintsButton();
+                    _hintsBtn.style.zIndex = '200001';
+
+                    // Pulse 3 times
+                    let count = 0;
+                    const pulseIn = () => {
+                        _hintsBtn.style.transition = 'background 0.5s ease-in-out, color 0.5s ease-in-out';
+                        _hintsBtn.style.background = '#ffb74d';
+                        _hintsBtn.style.color = '#1e1e1e';
+                    };
+                    const pulseOut = () => {
+                        _hintsBtn.style.transition = 'background 0.6s ease-in-out, color 0.6s ease-in-out';
+                        _hintsBtn.style.background = '#1e1e1e';
+                        _hintsBtn.style.color = '#ffb74d';
+                    };
+                    const doPulse = () => {
+                        if (count >= 3) {
+                            pulseOut();
+                            setTimeout(() => {
+                                _hintsBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
+                            }, 600);
+                            return;
+                        }
+                        pulseIn();
+                        setTimeout(() => {
+                            pulseOut();
+                            count++;
+                            setTimeout(doPulse, 500);
+                        }, 500);
+                    };
+                    doPulse();
+                }, 1500);
+            },
+            onLeave() {
+                if (_hintsBtn) _hintsBtn.style.zIndex = '100000';
+            },
         },
         {
             title: 'Let\'s Start',
-            body: `A customer is about to arrive. Open the IDE, write your first line of code, and serve them a coffee.\n\n<span style="color:#999">Hint: try writing</span> <span style="color:${accent}">robot.serveCoffee()</span>`,
+            body: `A customer is about to arrive. Open the <span style="color:#a78bfa">IDE</span>, write your first line of code, and serve them a coffee.\n\n<span style="color:#999">Hint: try writing</span> <span style="color:${accent}">robot.serveCoffee()</span>`,
         },
     ];
 
@@ -315,7 +410,11 @@ function showTutorial() {
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
+    let _prevPage = -1;
     function renderPage() {
+        // Call onLeave on previous page
+        if (_prevPage >= 0 && pages[_prevPage].onLeave) pages[_prevPage].onLeave();
+
         const page = pages[currentPage];
         titleEl.textContent = page.title;
         bodyEl.innerHTML = page.body;
@@ -323,6 +422,10 @@ function showTutorial() {
 
         const isLast = currentPage === pages.length - 1;
         nextBtn.textContent = isLast ? 'Start' : 'Next';
+
+        // Call onEnter on current page
+        if (page.onEnter) page.onEnter();
+        _prevPage = currentPage;
     }
 
     nextBtn.addEventListener('click', () => {
@@ -330,6 +433,8 @@ function showTutorial() {
             currentPage++;
             renderPage();
         } else {
+            // Call onLeave on last page
+            if (pages[currentPage].onLeave) pages[currentPage].onLeave();
             // Close tutorial
             card.style.opacity = '0';
             card.style.transform = 'scale(0.95)';
