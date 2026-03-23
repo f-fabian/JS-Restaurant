@@ -176,7 +176,7 @@ function showWelcomeScreen() {
     const optionsBtn = makeBtn('Options', '#888');
     const exitBtn    = makeBtn('Exit', '#888');
 
-    btnContainer.append(startBtn, optionsBtn, exitBtn);
+    btnContainer.append(startBtn);
     body.appendChild(btnContainer);
 
     // Version
