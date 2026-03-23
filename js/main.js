@@ -49,16 +49,174 @@ function loop() {
 }
 loop();
 
-// ── Spawn first customer automatically after 0.5s ──
+// ── Spawn first customer (triggered after welcome screen) ──
 let _firstCustomerSpawned = false;
-setTimeout(async () => {
-    const first = customers.find(c => !c.visible);
-    if (first) {
-        first.reset();
-        await first.enterWindowQueue();
+function spawnFirstCustomer() {
+    setTimeout(async () => {
+        const first = customers.find(c => !c.visible);
+        if (first) {
+            first.reset();
+            await first.enterWindowQueue();
+        }
+        _firstCustomerSpawned = true;
+    }, 500);
+}
+
+// ── Welcome screen ──────────────────────────────────────────────────
+function showWelcomeScreen() {
+    const font = '"Cascadia Code", "Fira Code", Consolas, monospace';
+
+    // Blocking overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 200000; background: rgba(0,0,0,0.65);
+        display: flex; align-items: center; justify-content: center;
+    `;
+
+    // Main card
+    const card = document.createElement('div');
+    card.style.cssText = `
+        background: #1a1a2e; border: 2px solid #4fc3f7; border-radius: 12px;
+        padding: 0; width: min(420px, 90vw); max-height: 90vh;
+        font-family: ${font}; color: #e0e0e0;
+        box-shadow: 0 8px 48px rgba(0,0,0,0.8);
+        display: flex; flex-direction: column; align-items: center;
+        overflow: hidden;
+        opacity: 0; transform: scale(0.95);
+        transition: opacity 0.5s ease, transform 0.5s ease;
+    `;
+
+    // Header image area (uses the background as banner)
+    const banner = document.createElement('div');
+    banner.style.cssText = `
+        width: 100%; height: 160px;
+        background: url('./assets/background.png') center 30% / cover;
+        border-bottom: 2px solid #333;
+        position: relative;
+    `;
+    // Dark gradient overlay on banner for readability
+    const bannerOverlay = document.createElement('div');
+    bannerOverlay.style.cssText = `
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(transparent 40%, #1a1a2e 100%);
+    `;
+    banner.appendChild(bannerOverlay);
+    card.appendChild(banner);
+
+    // Content area
+    const body = document.createElement('div');
+    body.style.cssText = `
+        padding: 24px 32px 28px; width: 100%;
+        display: flex; flex-direction: column; align-items: center; gap: 16px;
+    `;
+
+    // Title
+    const title = document.createElement('div');
+    title.style.cssText = `
+        font-size: 28px; font-weight: bold; color: #4fc3f7;
+        letter-spacing: 2px; text-transform: uppercase; text-align: center;
+        margin-top: -8px;
+    `;
+    title.textContent = 'Burachok JS Bar';
+    body.appendChild(title);
+
+    // Subtitle / tagline
+    const tagline = document.createElement('div');
+    tagline.style.cssText = `
+        font-size: 13px; color: #999; text-align: center;
+        line-height: 1.6; max-width: 320px;
+    `;
+    tagline.textContent = 'Write code. Serve coffee. Build your empire.';
+    body.appendChild(tagline);
+
+    // Separator
+    const sep = document.createElement('div');
+    sep.style.cssText = 'width: 60px; height: 2px; background: #333; margin: 4px 0;';
+    body.appendChild(sep);
+
+    // Buttons
+    const btnContainer = document.createElement('div');
+    btnContainer.style.cssText = `
+        display: flex; flex-direction: column; gap: 10px;
+        width: 100%; max-width: 260px;
+    `;
+
+    function makeBtn(label, color, primary = false) {
+        const btn = document.createElement('button');
+        btn.textContent = label;
+        btn.style.cssText = `
+            background: ${primary ? color : 'transparent'};
+            color: ${primary ? '#1a1a2e' : color};
+            border: 2px solid ${color};
+            border-radius: 8px; padding: 12px 0; cursor: pointer;
+            font-family: ${font}; font-size: ${primary ? '15px' : '13px'};
+            font-weight: bold; letter-spacing: 1px;
+            text-transform: uppercase; text-align: center;
+            transition: background 0.2s ease, color 0.2s ease;
+            width: 100%;
+        `;
+        btn.addEventListener('mouseenter', () => {
+            if (primary) {
+                btn.style.background = '#1a1a2e';
+                btn.style.color = color;
+            } else {
+                btn.style.background = color;
+                btn.style.color = '#1a1a2e';
+            }
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = primary ? color : 'transparent';
+            btn.style.color = primary ? '#1a1a2e' : color;
+        });
+        return btn;
     }
-    _firstCustomerSpawned = true;
-}, 1500);
+
+    const startBtn   = makeBtn('New Game', '#4fc3f7', true);
+    const optionsBtn = makeBtn('Options', '#888');
+    const exitBtn    = makeBtn('Exit', '#888');
+
+    btnContainer.append(startBtn, optionsBtn, exitBtn);
+    body.appendChild(btnContainer);
+
+    // Version
+    const version = document.createElement('div');
+    version.style.cssText = 'font-size: 10px; color: #555; margin-top: 4px;';
+    version.textContent = 'v0.1 — Early Access';
+    body.appendChild(version);
+
+    card.appendChild(body);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    // Fade in
+    requestAnimationFrame(() => {
+        card.style.opacity = '1';
+        card.style.transform = 'scale(1)';
+    });
+
+    // Start game
+    startBtn.addEventListener('click', () => {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        overlay.style.transition = 'opacity 0.5s ease';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.remove();
+            spawnFirstCustomer();
+        }, 500);
+    });
+
+    // Placeholder buttons
+    optionsBtn.addEventListener('click', () => {
+        // TODO: options menu
+    });
+    exitBtn.addEventListener('click', () => {
+        // TODO: exit action
+    });
+}
+
+showWelcomeScreen();
 
 // ── HUD counters ──────────────────────────────────────────────────────
 let money = 5;
