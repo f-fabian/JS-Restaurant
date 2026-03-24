@@ -608,14 +608,14 @@ function showTutorial() {
 }
 
 // ── HUD counters ──────────────────────────────────────────────────────
-let money = 5;
+let money = 0;
 const moneyDisplay = document.getElementById("moneyDisplay");
 function addMoney(amount) {
     money += amount;
     moneyDisplay.textContent = `$ ${money}`;
 }
 
-let servedCount = 6;
+let servedCount = 0;
 const customerDisplay = document.getElementById("customerDisplay");
 const beansDisplay    = document.getElementById("beansDisplay");
 
