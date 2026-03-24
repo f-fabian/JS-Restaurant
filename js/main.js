@@ -195,8 +195,10 @@ function showWelcomeScreen() {
         card.style.transform = 'scale(1)';
     });
 
-    // Start game
+    // Start game (once only)
     startBtn.addEventListener('click', () => {
+        startBtn.disabled = true;
+        startBtn.style.pointerEvents = 'none';
         card.style.opacity = '0';
         card.style.transform = 'scale(0.95)';
         overlay.style.transition = 'opacity 0.5s ease';
@@ -244,7 +246,7 @@ function showTutorial() {
                 nextBtn.style.pointerEvents = 'none';
                 // Re-enable transition for the fade-in when IDE is opened
                 requestAnimationFrame(() => {
-                    nextBtn.style.transition = 'opacity 0.4s ease';
+                    nextBtn.style.transition = 'opacity 0.5s ease';
                 });
 
                 // After a short reading delay, show arrow first, then fade in IDE button
@@ -315,8 +317,10 @@ function showTutorial() {
                                 self._arrow.style.opacity = '0';
                                 setTimeout(() => { self._arrow.remove(); self._arrow = null; }, 400);
                             }
-                            nextBtn.style.opacity = '1';
-                            nextBtn.style.pointerEvents = 'auto';
+                            setTimeout(() => {
+                                nextBtn.style.opacity = '1';
+                                nextBtn.style.pointerEvents = 'auto';
+                            }, 700);
                         };
                         ideBtn.addEventListener('click', self._handler);
                     }, 700);
@@ -335,52 +339,126 @@ function showTutorial() {
                 }
                 // Remove arrow if still present
                 if (this._arrow) { this._arrow.remove(); this._arrow = null; }
-                // Restore Next button for other pages
-                nextBtn.style.opacity = '1';
-                nextBtn.style.pointerEvents = 'auto';
             },
         },
         {
             title: 'Hints',
-            body: `Throughout the game you'll receive <span style="color:#ffb74d">hints</span> and tips. They are saved automatically so you can revisit them anytime.\n\nClick the <span style="color:#ffb74d">Hints</span> button to browse your collected advice. It will flash each time a new hint is added.`,
+            body: `Throughout the game you'll receive <span style="color:#ffb74d">hints</span> and tips. They are saved automatically so you can revisit them anytime.\n\n<span style="color:#fff">Click the</span> <span style="color:#ffb74d">Hints</span> <span style="color:#fff">button below to continue.</span> It will flash each time a new hint is added.`,
+            _handler: null,
+            _arrow: null,
+            _pulseRunning: false,
             onEnter() {
+                const self = this;
+                // Hide Next instantly until user opens Hints
+                nextBtn.style.transition = 'none';
+                nextBtn.style.opacity = '0';
+                nextBtn.style.pointerEvents = 'none';
+                nextBtn.style.visibility = 'hidden';
+                void nextBtn.offsetHeight; // force reflow
+                nextBtn.style.transition = 'opacity 0.5s ease';
+
+                // After reading delay, show arrow then button
                 setTimeout(() => {
-                    // Build button if needed (with its built-in fade)
-                    if (!_hintsBtn) _buildHintsButton();
+                    // Build hints button if needed (but don't fade it yet)
+                    if (!_hintsBtn) _buildHintsButton(true);
+                    // Ensure it starts hidden for our controlled fade
+                    _hintsBtn.style.opacity = '0';
+                    _hintsBtn.style.pointerEvents = 'none';
                     _hintsBtn.style.zIndex = '200001';
 
-                    // Pulse 3 times
-                    let count = 0;
-                    const pulseIn = () => {
-                        _hintsBtn.style.transition = 'background 0.5s ease-in-out, color 0.5s ease-in-out';
-                        _hintsBtn.style.background = '#ffb74d';
-                        _hintsBtn.style.color = '#1e1e1e';
-                    };
-                    const pulseOut = () => {
-                        _hintsBtn.style.transition = 'background 0.6s ease-in-out, color 0.6s ease-in-out';
-                        _hintsBtn.style.background = '#1e1e1e';
-                        _hintsBtn.style.color = '#ffb74d';
-                    };
-                    const doPulse = () => {
-                        if (count >= 3) {
-                            pulseOut();
+                    // Arrow appears first (below button, pointing up)
+                    const arrow = document.createElement('div');
+                    arrow.textContent = '▲';
+                    arrow.style.cssText = `
+                        position: fixed; z-index: 200002;
+                        font-size: 28px; color: #ffb74d;
+                        pointer-events: none;
+                        transform: translateX(-50%);
+                        animation: ideArrowFadeIn 0.5s ease forwards, hintsArrowBounce 1s ease-in-out infinite;
+                    `;
+                    // Add bounce keyframes for upward arrow (bounces up instead of down)
+                    if (!document.getElementById('hintsArrowBounceStyle')) {
+                        const style = document.createElement('style');
+                        style.id = 'hintsArrowBounceStyle';
+                        style.textContent = `@keyframes hintsArrowBounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-8px); } }`;
+                        document.head.appendChild(style);
+                    }
+                    const rect = _hintsBtn.getBoundingClientRect();
+                    arrow.style.left = (rect.left + rect.width / 2) + 'px';
+                    arrow.style.top = (rect.bottom + 8) + 'px';
+                    document.body.appendChild(arrow);
+                    self._arrow = arrow;
+
+                    // 0.7s later, fade in Hints button and start pulsing
+                    setTimeout(() => {
+                        _hintsBtn.style.opacity = '1';
+                        _hintsBtn.style.pointerEvents = 'auto';
+
+                        // Continuous pulse until user clicks
+                        const pulseIn = () => {
+                            _hintsBtn.style.transition = 'background 0.5s ease-in-out, color 0.5s ease-in-out';
+                            _hintsBtn.style.background = '#ffb74d';
+                            _hintsBtn.style.color = '#1e1e1e';
+                        };
+                        const pulseOut = () => {
+                            _hintsBtn.style.transition = 'background 0.6s ease-in-out, color 0.6s ease-in-out';
+                            _hintsBtn.style.background = '#1e1e1e';
+                            _hintsBtn.style.color = '#ffb74d';
+                        };
+                        self._pulseRunning = true;
+                        const doPulse = () => {
+                            if (!self._pulseRunning) return;
+                            pulseIn();
                             setTimeout(() => {
-                                _hintsBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
-                            }, 600);
-                            return;
-                        }
-                        pulseIn();
-                        setTimeout(() => {
-                            pulseOut();
-                            count++;
-                            setTimeout(doPulse, 500);
-                        }, 500);
-                    };
-                    doPulse();
+                                if (!self._pulseRunning) return;
+                                pulseOut();
+                                setTimeout(doPulse, 500);
+                            }, 500);
+                        };
+                        // Wait for fade to finish before pulsing
+                        setTimeout(doPulse, 500);
+
+                        // When user clicks Hints button, stop pulse, remove arrow, raise window, reveal Next
+                        self._handler = () => {
+                            self._pulseRunning = false;
+                            _hintsBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
+                            // Raise hints window above overlay
+                            if (_hintsWin) _hintsWin.style.zIndex = '200001';
+                            if (self._arrow) {
+                                self._arrow.style.opacity = '0';
+                                setTimeout(() => { self._arrow.remove(); self._arrow = null; }, 400);
+                            }
+                            setTimeout(() => {
+                                nextBtn.style.visibility = 'visible';
+                                nextBtn.style.opacity = '1';
+                                nextBtn.style.pointerEvents = 'auto';
+                            }, 700);
+                        };
+                        _hintsBtn.addEventListener('click', self._handler, { once: true });
+                    }, 700);
                 }, 1500);
             },
             onLeave() {
-                if (_hintsBtn) _hintsBtn.style.zIndex = '100000';
+                this._pulseRunning = false;
+                if (_hintsBtn) {
+                    _hintsBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
+                    _hintsBtn.style.zIndex = '100000';
+                    // Close hints window if open
+                    if (_hintsWin && _hintsWin.style.display !== 'none') {
+                        _hintsBtn.click();
+                    }
+                }
+                // Reset hints window z-index
+                if (_hintsWin) _hintsWin.style.zIndex = '';
+                if (this._handler) {
+                    _hintsBtn.removeEventListener('click', this._handler);
+                    this._handler = null;
+                }
+                if (this._arrow) { this._arrow.remove(); this._arrow = null; }
+                // Restore Next button
+                nextBtn.style.visibility = 'visible';
+                nextBtn.style.opacity = '1';
+                nextBtn.style.pointerEvents = 'auto';
             },
         },
         {
@@ -917,7 +995,7 @@ let _selectedHint = -1;
 const _font = '"Cascadia Code", "Fira Code", Consolas, monospace';
 
 // ── Fixed "Hints" button (same style as Updates, positioned below it) ──
-function _buildHintsButton() {
+function _buildHintsButton(skipReveal) {
     const btn = document.createElement('button');
     btn.textContent = 'Hints';
     btn.style.cssText = `
@@ -943,11 +1021,13 @@ function _buildHintsButton() {
     document.body.appendChild(btn);
     _hintsBtn = btn;
 
-    // Fade in
-    requestAnimationFrame(() => {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
-    });
+    // Fade in (skip when tutorial controls the reveal)
+    if (!skipReveal) {
+        requestAnimationFrame(() => {
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+        });
+    }
 
     btn.addEventListener('click', () => {
         if (!_hintsWin) _buildHintsWindow();
