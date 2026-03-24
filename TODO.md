@@ -47,10 +47,14 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 
 BUGS
 
+- pagina 3, quitar boton next hasta que abran el IDE y que este parpadee.
+- pagina 4, lo mismo con los hints.
+- ivnertir efecto fade
 - tenemos que guardar el tutorial en hints.
-- Sacar primera funcion del tutorial
-- crear tutorial aparte para primera funcion
+- Sacar primera funcion del tutorial y cambiarla por otro mensaje.
+- crear tutorial aparte para primera funcion.
 - ya no tenemos que mostrar el conesjo de que los hints se guardan.
+- quitar el boton step que aun no funciona.
 
 update while:
 - al comprar while no comienzan a venir automaticamente

@@ -234,50 +234,97 @@ function showTutorial() {
         },
         {
             title: 'The IDE',
-            body: `This is where you'll write code to control the robot. The <span style="color:${accent}">RUN</span> button executes your commands.\n\n<span style="color:#999">Try opening it — click the</span> <span style="color:#a78bfa">IDE</span> <span style="color:#999">button below.</span>`,
+            body: `This is where you'll write code to control the robot. The <span style="color:${accent}">RUN</span> button executes your commands.\n\n<span style="color:#fff">Click the</span> <span style="color:#a78bfa">IDE</span> <span style="color:#fff">button below to continue.</span>`,
             _handler: null,
             onEnter() {
                 const self = this;
-                // After a short reading delay, raise IDE button and pulse it
-                setTimeout(() => {
-                    ideBtn.style.zIndex = '200001';
-                    // Pulse 3 times
-                    let count = 0;
-                    const pulseIn = () => {
-                        ideBtn.style.transition = 'background 0.5s ease-in-out, color 0.5s ease-in-out';
-                        ideBtn.style.background = ideColor;
-                        ideBtn.style.color = '#1e1e1e';
-                    };
-                    const pulseOut = () => {
-                        ideBtn.style.transition = 'background 0.6s ease-in-out, color 0.6s ease-in-out';
-                        ideBtn.style.background = '#1e1e1e';
-                        ideBtn.style.color = ideColor;
-                    };
-                    const doPulse = () => {
-                        if (count >= 3) {
-                            pulseOut();
-                            setTimeout(() => {
-                                ideBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
-                            }, 600);
-                            return;
-                        }
-                        pulseIn();
-                        setTimeout(() => {
-                            pulseOut();
-                            count++;
-                            setTimeout(doPulse, 500);
-                        }, 500);
-                    };
-                    doPulse();
+                // Hide Next instantly until user opens the IDE
+                nextBtn.style.transition = 'none';
+                nextBtn.style.opacity = '0';
+                nextBtn.style.pointerEvents = 'none';
+                // Re-enable transition for the fade-in when IDE is opened
+                requestAnimationFrame(() => {
+                    nextBtn.style.transition = 'opacity 0.4s ease';
+                });
 
-                    // When user clicks IDE button, raise the window too
-                    self._handler = () => {
-                        controlsWin.style.zIndex = '200001';
-                    };
-                    ideBtn.addEventListener('click', self._handler);
+                // After a short reading delay, show arrow first, then fade in IDE button
+                setTimeout(() => {
+                    // Add bounce keyframes
+                    if (!document.getElementById('ideArrowBounceStyle')) {
+                        const style = document.createElement('style');
+                        style.id = 'ideArrowBounceStyle';
+                        style.textContent = `@keyframes ideArrowBounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }`;
+                        document.head.appendChild(style);
+                    }
+
+                    // Arrow appears first
+                    const arrow = document.createElement('div');
+                    arrow.textContent = '▼';
+                    arrow.style.cssText = `
+                        position: fixed; z-index: 200002;
+                        font-size: 28px; color: #a78bfa;
+                        pointer-events: none;
+                        opacity: 0; transition: opacity 1s ease;
+                        animation: ideArrowBounce 1s ease-in-out infinite;
+                    `;
+                    // Position arrow centered above IDE button
+                    const rect = ideBtn.getBoundingClientRect();
+                    arrow.style.left = (rect.left + rect.width / 2) + 'px';
+                    arrow.style.top = (rect.top - 36) + 'px';
+                    arrow.style.transform = 'translateX(-50%)';  // center regardless of char width
+                    document.body.appendChild(arrow);
+                    requestAnimationFrame(() => { arrow.style.opacity = '1'; });
+                    self._arrow = arrow;
+
+                    // 1 second later, fade in IDE button, then pulse after fade
+                    setTimeout(() => {
+                        ideBtn.style.opacity = '1';
+                        ideBtn.style.pointerEvents = 'auto';
+                        ideBtn.style.zIndex = '200001';
+
+                        // Start pulsing AFTER the fade-in completes (2.5s)
+                        const pulseIn = () => {
+                            ideBtn.style.transition = 'background 0.5s ease-in-out, color 0.5s ease-in-out';
+                            ideBtn.style.background = ideColor;
+                            ideBtn.style.color = '#1e1e1e';
+                        };
+                        const pulseOut = () => {
+                            ideBtn.style.transition = 'background 0.6s ease-in-out, color 0.6s ease-in-out';
+                            ideBtn.style.background = '#1e1e1e';
+                            ideBtn.style.color = ideColor;
+                        };
+                        self._pulseRunning = true;
+                        const doPulse = () => {
+                            if (!self._pulseRunning) return;
+                            pulseIn();
+                            setTimeout(() => {
+                                if (!self._pulseRunning) return;
+                                pulseOut();
+                                setTimeout(doPulse, 500);
+                            }, 500);
+                        };
+                        // Wait for fade to finish before starting pulse
+                        setTimeout(doPulse, 500);
+
+                        // When user clicks IDE button, stop pulse, remove arrow, reveal Next
+                        self._handler = () => {
+                            self._pulseRunning = false;
+                            ideBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
+                            controlsWin.style.zIndex = '200001';
+                            if (self._arrow) {
+                                self._arrow.style.opacity = '0';
+                                setTimeout(() => { self._arrow.remove(); self._arrow = null; }, 400);
+                            }
+                            nextBtn.style.opacity = '1';
+                            nextBtn.style.pointerEvents = 'auto';
+                        };
+                        ideBtn.addEventListener('click', self._handler);
+                    }, 700);
                 }, 1500);
             },
             onLeave() {
+                this._pulseRunning = false;
+                ideBtn.style.transition = 'background 0.2s ease, color 0.2s ease';
                 ideBtn.style.zIndex = '100000';
                 controlsWin.style.zIndex = '';
                 // Close IDE if open
@@ -286,6 +333,11 @@ function showTutorial() {
                     ideBtn.removeEventListener('click', this._handler);
                     this._handler = null;
                 }
+                // Remove arrow if still present
+                if (this._arrow) { this._arrow.remove(); this._arrow = null; }
+                // Restore Next button for other pages
+                nextBtn.style.opacity = '1';
+                nextBtn.style.pointerEvents = 'auto';
             },
         },
         {
@@ -1203,12 +1255,13 @@ const ideBtn = document.createElement('button');
 ideBtn.textContent = 'IDE';
 ideBtn.style.cssText = `
     position: fixed; bottom: 10px; left: 12px; z-index: 100000;
-    background: ${ideColor}; color: #1e1e1e; border: 2px solid ${ideColor};
+    background: #1e1e1e; color: ${ideColor}; border: 2px solid ${ideColor};
     border-radius: 8px; padding: 12px 0; cursor: pointer; width: 148px;
     font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
     font-size: 16px; font-weight: bold;
     letter-spacing: 1px; text-transform: uppercase; text-align: center;
-    transition: background 0.2s ease, color 0.2s ease;
+    opacity: 0; pointer-events: none;
+    transition: opacity 1s ease, background 0.2s ease, color 0.2s ease;
 `;
 ideBtn.addEventListener('mouseenter', () => {
     if (_ideOpen) return;
