@@ -235,7 +235,7 @@ function showTutorial() {
             body: `You need to <span style="color:${accent}">write code</span> to tell the robot what to do.\n\nServe coffee to customers, earn money, and unlock new abilities to grow your business.`,
         },
         {
-            title: 'The IDE',
+            title: 'The IDE (Integrated Development Environment)',
             body: `This is where you'll write code to control the robot. The <span style="color:${accent}">RUN</span> button executes your commands.\n\n<span style="color:#fff">Click the</span> <span style="color:#a78bfa">IDE</span> <span style="color:#fff">button below to continue.</span>`,
             _handler: null,
             onEnter() {
@@ -582,6 +582,14 @@ function showTutorial() {
             setTimeout(() => {
                 overlay.remove();
                 card.remove();
+                // Archive tutorial into hints window
+                const tutorialBody = pages
+                    .map(p => `<div style="margin-bottom:16px"><strong style="color:${accent}">${p.title}</strong><br>${p.body}</div>`)
+                    .join('');
+                _hints.push({ title: 'Tutorial', body: tutorialBody });
+                _selectedHint = _hints.length - 1;
+                if (_hintsWin) _renderHintsList();
+                if (_hintsBtn) _flashHintsButton();
                 // Open the IDE
                 if (!_ideOpen) ideBtn.click();
                 // Spawn first customer
@@ -1221,27 +1229,11 @@ function showHintPopup() {
     const hintBody  = `Serving customers one by one is slow... There must be a better way.\n\n`
         + `<span style="color:#4fc3f7">Check for available updates.</span>`;
 
-    // 1) Show the hint toast (below Updates button at top:62px)
     _showHintToast(hintTitle, hintBody, () => {
-        // Archive this hint
         _hints.push({ title: hintTitle, body: hintBody });
         _selectedHint = _hints.length - 1;
-
-        // 2) Show a second toast explaining the Hints button (NOT archived)
-        _showHintToast(
-            'Hints saved',
-            `All hints are saved for you. Click the <span style="color:#ffb74d;font-weight:bold">Hints</span> button to read them again anytime. It will flash each time a new hint is saved.`,
-            () => {
-                // flash once the tutorial toast is dismissed too
-                if (_hintsBtn) _flashHintsButton();
-            },
-            63  // below the Hints button (now at top: 12px)
-        );
-
-        // 3) After a delay, show the Hints button
-        setTimeout(() => {
-            if (!_hintsBtn) _buildHintsButton();
-        }, 2000);
+        if (_hintsWin) _renderHintsList();
+        if (_hintsBtn) _flashHintsButton();
     }, 113);  // below the Updates button (now at top: 62px)
 
     // Show the Updates button after 2s

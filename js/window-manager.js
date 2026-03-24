@@ -19,7 +19,7 @@ const RESIZE_HANDLES = [
 export class WindowManager {
 
     constructor() {
-        this._z       = 200;
+        this._z       = 100100;
         this._windows = new Set();
 
         this._taskbar    = document.createElement('div');
