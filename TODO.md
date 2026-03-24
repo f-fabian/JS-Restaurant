@@ -16,24 +16,22 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 
 ## Progresion de niveles (DISEÑO PENDIENTE)
 - [x] clientes viniendo desde el comienzo y no cuando tocamos en run.
-- [ ] el juego se pausa si cambiamos de ventana.
-- [ ] Nivel 1: acciones basicas (1-2 funciones). Se ejecuta UNA vez por RUN
-- [ ] Ventana de hints.
-- [ ] Nivel 2: mas funciones, secuencias mas largas
-- [ ] Nivel 3: desbloquear `while` — automatizacion
-- [ ] Nivel 4: desbloquear `if/else` — toma de decisiones
-- [ ] Nivel 5+: funciones avanzadas (takeOrder, makeCocktail, etc.)
+- [x] Nivel 1: acciones basicas (1-2 funciones). Se ejecuta UNA vez por RUN
+- [x] Ventana de hints.
+- [x] Nivel 2: desbloquear `while` — automatizacion
+- [x] Nivel 3: desbloquear `if/else` — toma de decisiones
+- [ ] Nivel 4+: funciones avanzadas (takeOrder, makeCocktail, etc.)
 
 ## Tienda / Firmware Updates
-- [ ] Sistema de dinero (ya existe parcialmente)
+- [x] Sistema de dinero (ya existe parcialmente)
 - [ ] Tienda con "arbol de conceptos" desbloqueables con dinero
-- [ ] Narrativa: "Firmware update" del robot para nuevas capacidades
-- [ ] El editor rechaza keywords/funciones no desbloqueadas
-- [ ] BUG: while no spawnea automaticamente clientes
+- [x] Narrativa: "Firmware update" del robot para nuevas capacidades
+- [x] El editor rechaza keywords/funciones no desbloqueadas
+- [x] BUG: while no spawnea automaticamente clientes
 
 ## Manejo de errores (2 fases)
 ### Fase 1 (MVP)
-- [ ] Pop-up emergente con mensaje de error simplificado
+- [x] Pop-up emergente con mensaje de error simplificado
 - [ ] Boton "pedir consejo" para ayuda contextual
 
 ### Fase 2 (desbloqueable)
@@ -49,7 +47,10 @@ automatizando un robot mesero en un bar. Progresion gradual de conceptos.
 
 BUGS
 
-
+- tenemos que guardar el tutorial en hints.
+- Sacar primera funcion del tutorial
+- crear tutorial aparte para primera funcion
+- ya no tenemos que mostrar el conesjo de que los hints se guardan.
 
 update while:
 - al comprar while no comienzan a venir automaticamente

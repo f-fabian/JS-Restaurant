@@ -232,7 +232,8 @@ html, body {
     gap: 6px;
     border: none;
     padding: 8px 6px;
-    font-family: monospace;
+    /* font-family: monospace; */
+    font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
     font-size: 13px;
     font-weight: bold;
     cursor: pointer;

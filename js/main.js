@@ -1272,7 +1272,7 @@ btnBar.append(runBtn, stepBtn);
 // never prevents the canvas / game loop from starting.
 const initialCode = `// Write your code here. 
 // Use the "RUN" button to execute. 
-// Unlock more features in the shop!
+
 `;
 
 let editor = null;
