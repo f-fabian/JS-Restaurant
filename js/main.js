@@ -253,27 +253,27 @@ function showTutorial() {
                     if (!document.getElementById('ideArrowBounceStyle')) {
                         const style = document.createElement('style');
                         style.id = 'ideArrowBounceStyle';
-                        style.textContent = `@keyframes ideArrowBounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }`;
+                        style.textContent = `
+                        @keyframes ideArrowBounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(8px); } }
+                        @keyframes ideArrowFadeIn { from { opacity: 0; } to { opacity: 1; } }
+                    `;
                         document.head.appendChild(style);
                     }
 
-                    // Arrow appears first
+                    // Arrow appears first — bounce + fade in simultaneously via animations
                     const arrow = document.createElement('div');
                     arrow.textContent = '▼';
                     arrow.style.cssText = `
                         position: fixed; z-index: 200002;
                         font-size: 28px; color: #a78bfa;
                         pointer-events: none;
-                        opacity: 0; transition: opacity 1s ease;
-                        animation: ideArrowBounce 1s ease-in-out infinite;
+                        transform: translateX(-50%);
+                        animation: ideArrowFadeIn 0.5s ease forwards, ideArrowBounce 1s ease-in-out infinite;
                     `;
-                    // Position arrow centered above IDE button
                     const rect = ideBtn.getBoundingClientRect();
                     arrow.style.left = (rect.left + rect.width / 2) + 'px';
                     arrow.style.top = (rect.top - 36) + 'px';
-                    arrow.style.transform = 'translateX(-50%)';  // center regardless of char width
                     document.body.appendChild(arrow);
-                    requestAnimationFrame(() => { arrow.style.opacity = '1'; });
                     self._arrow = arrow;
 
                     // 1 second later, fade in IDE button, then pulse after fade
