@@ -156,9 +156,9 @@ export class Game {
         this.ctx = ctx;
 
         this.background = new Image();
-        this.background.src = "/assets/background-2.png";
+        this.background.src = "./assets/background-2.png";
         this.foreground = new Image();
-        this.foreground.src = "/assets/background-1.png";
+        this.foreground.src = "./assets/background-1.png";
 
         const container = this.canvas.parentElement;
         this.canvas.width = container.clientWidth;

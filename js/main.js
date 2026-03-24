@@ -16,11 +16,11 @@ const robot = new Robot();
 // Pool of reusable customer instances (enough to fill the window queue)
 const customers = Array.from({ length: 9 }, () => new Customer());
 const cocktails = [
-    new Cocktail("Aperol Spritz", "/assets/aperol.png"),
-    new Cocktail("Aperol Spritz", "/assets/aperol.png"),
-    new Cocktail("Aperol Spritz", "/assets/aperol.png"),
+    new Cocktail("Aperol Spritz", "./assets/aperol.png"),
+    new Cocktail("Aperol Spritz", "./assets/aperol.png"),
+    new Cocktail("Aperol Spritz", "./assets/aperol.png"),
 ];
-const coffee = new Cocktail("Coffee", "/assets/aperol.png", 1); // TODO: replace with coffee sprite
+const coffee = new Cocktail("Coffee", "./assets/aperol.png", 1); // TODO: replace with coffee sprite
 
 // ── Debug flags ──────────────────────────────────────────────────────
 const DEBUG_DUMMIES    = false;
@@ -463,7 +463,7 @@ function showTutorial() {
         },
         {
             title: 'Let\'s Start',
-            body: `A customer is about to arrive. Open the <span style="color:#a78bfa">IDE</span>, write your first line of code, and serve them a coffee.\n\n<span style="color:#999">Hint: try writing</span> <span style="color:${accent}">robot.serveCoffee()</span>`,
+            body: `Your first customer is on the way. Open the <span style="color:#a78bfa">IDE</span>, write your first line of code, and serve them a coffee.\n\n<span style="color:${accent}">No pressure... but that customer looks impatient.</span>`,
         },
     ];
 
@@ -477,9 +477,16 @@ function showTutorial() {
         display: flex; align-items: center; justify-content: center;
     `;
 
-    // Card
+    // Card (independent from overlay so hints window can sit between them)
     const card = document.createElement('div');
     card.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 200002;
+        display: flex; align-items: center; justify-content: center;
+        pointer-events: none;
+    `;
+    const cardInner = document.createElement('div');
+    cardInner.style.cssText = `
         background: #1a1a2e; border: 2px solid ${accent}; border-radius: 12px;
         width: min(440px, 90vw); min-height: 260px;
         font-family: ${font}; color: #e0e0e0;
@@ -487,6 +494,7 @@ function showTutorial() {
         display: flex; flex-direction: column;
         opacity: 0; transform: scale(0.95);
         transition: opacity 0.4s ease, transform 0.4s ease;
+        pointer-events: auto;
     `;
 
     // Title area
@@ -536,9 +544,10 @@ function showTutorial() {
     });
 
     footer.append(pageIndicator, nextBtn);
-    card.append(titleEl, bodyEl, footer);
-    overlay.appendChild(card);
+    cardInner.append(titleEl, bodyEl, footer);
+    card.appendChild(cardInner);
     document.body.appendChild(overlay);
+    document.body.appendChild(card);
 
     let _prevPage = -1;
     function renderPage() {
@@ -551,7 +560,7 @@ function showTutorial() {
         pageIndicator.textContent = `${currentPage + 1} / ${pages.length}`;
 
         const isLast = currentPage === pages.length - 1;
-        nextBtn.textContent = isLast ? 'Start' : 'Next';
+        nextBtn.textContent = isLast ? 'Open Shop!' : 'Next';
 
         // Call onEnter on current page
         if (page.onEnter) page.onEnter();
@@ -566,12 +575,13 @@ function showTutorial() {
             // Call onLeave on last page
             if (pages[currentPage].onLeave) pages[currentPage].onLeave();
             // Close tutorial
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.95)';
+            cardInner.style.opacity = '0';
+            cardInner.style.transform = 'scale(0.95)';
             overlay.style.transition = 'opacity 0.4s ease';
             overlay.style.opacity = '0';
             setTimeout(() => {
                 overlay.remove();
+                card.remove();
                 // Open the IDE
                 if (!_ideOpen) ideBtn.click();
                 // Spawn first customer
@@ -584,8 +594,8 @@ function showTutorial() {
 
     // Fade in
     requestAnimationFrame(() => {
-        card.style.opacity = '1';
-        card.style.transform = 'scale(1)';
+        cardInner.style.opacity = '1';
+        cardInner.style.transform = 'scale(1)';
     });
 }
 

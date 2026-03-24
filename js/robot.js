@@ -23,7 +23,7 @@ export class Robot {
         this.speed = 5;
 
         // Sprite
-        this.sprite      = new Sprite('/assets/character_Sheet.png');
+        this.sprite      = new Sprite('./assets/character_Sheet.png');
         this.spriteFrame = 3;   // current animation frame (0 = idle/stand)
         this.spriteRow   = 2;   // direction row (0,2,4,6)
         this._walkTick   = 0;   // RAF-tick counter for frame pacing

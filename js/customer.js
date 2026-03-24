@@ -38,7 +38,7 @@ export class Customer {
         this.order = "1 Coffee please";
 
         // Sprite
-        this.sprite      = new Sprite('/assets/character_clothed.png');
+        this.sprite      = new Sprite('./assets/character_clothed.png');
         this.spriteFrame = 3;   // current animation frame (0 = idle/stand)
         this.spriteRow   = 0;   // direction row (0,2,4,6)
         this._walkTick   = 0;   // RAF-tick counter for frame pacing
